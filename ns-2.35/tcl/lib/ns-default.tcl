@@ -106,6 +106,8 @@ Queue/DropTail set mean_pktsize_ 500
 
 Queue/DropTail/PriQueue set Prefer_Routing_Protocols    1
 
+Queue/SharedMemory set summarystats_ false
+
 # special cmu implemented priority queue used by DSR
 CMUPriQueue set qlen_logthresh_ 10
 CMUPriQueue set fw_logthresh_ 25
