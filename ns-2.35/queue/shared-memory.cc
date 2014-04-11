@@ -152,7 +152,9 @@ Packet* SharedMemory::deque()
 void SharedMemory::print_summarystats()
 {
 	//double now = Scheduler::instance().clock();
+		printf("Queue Id: %5d", queue_id);
         printf("True average queue: %5.3f", true_ave_);
+		printf("Queue Length: %5d", q_->length());
         // if (qib_)
         //        printf(" (in bytes)");
         printf(" time: %5.3f\n", total_time_);
