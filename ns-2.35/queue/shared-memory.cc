@@ -142,10 +142,10 @@ void SharedMemory::shrink_queue()
 
 Packet* SharedMemory::deque()
 {
-        if (summarystats && &Scheduler::instance() != NULL) {
-                // Queue::updateStats(qib_?q_->byteLength():q_->length());
-                Queue::updateStats(q_->length());
-        }
+    if (summarystats && &Scheduler::instance() != NULL) {
+        // Queue::updateStats(qib_?q_->byteLength():q_->length());
+        Queue::updateStats(q_->length());
+    }
 	return q_->deque();
 }
 

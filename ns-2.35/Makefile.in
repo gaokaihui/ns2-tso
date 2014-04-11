@@ -216,7 +216,7 @@ OBJ_CC = \
         dccp/dccp_tfrc.o \
 	tools/integrator.o tools/queue-monitor.o \
 	tools/flowmon.o tools/loss-monitor.o \
-	queue/queue.o queue/drop-tail.o queue/shared-memory.o\
+	queue/queue.o queue/drop-tail.o queue/shared-memory.o queue/enhanced-shared-memory.o\
 	adc/simple-intserv-sched.o queue/red.o \
 	queue/semantic-packetqueue.o queue/semantic-red.o \
 	tcp/ack-recons.o \
