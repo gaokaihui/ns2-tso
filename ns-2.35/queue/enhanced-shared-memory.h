@@ -42,45 +42,52 @@
 #include "queue.h"
 #include "config.h"
 #include "shared-memory.h"
+#include "scheduler.h"
 
 #define MAX_LINK_NUM 100 // maximum number of link
 #define SWITCH_PORTS 3 // the number of switch ports
 #define ALPHA 0.5
-#define BUFFER_SIZE 6
-#define COUNTER1 1
-#define COUNTER2 3
-#define INIT_TIMER1 3	// timer in milliseconds
-#define INIT_TIMER2 3	// timer in milliseconds
+#define BUFFER_SIZE 100
+#define COUNTER1 2
+#define COUNTER2 13
+#define INIT_TIMER1 30	// timer in milliseconds
+#define INIT_TIMER2 100  // timer in milliseconds
+#define NOW_TIME Scheduler::instance().clock() * 1000
 
 /*
  * A bounded, drop-tail queue
  */
-class EnhancedSharedMemory : public SharedMemory {
+class EnhancedSharedMemory : public Queue {
   public:
 	EnhancedSharedMemory() {
+		q_ = new PacketQueue;
+		pq_ = q_;
 		counter1 = 0;
 		counter2 = 0;
-		trigger_time1 = getCurrentTime();
+		trigger_time1 = NOW_TIME;
 		trigger_time2 = -1;
+		queue_id = queue_num++;
+		all_queue[queue_id] = this;
 	}
-	static int get_occupied_mem(int id); // get threshold of queue id
-	static double get_threshold(int id); // get threshold of queue id
+	~EnhancedSharedMemory() {
+		delete q_;
+	}
 
   protected:
 	void enque(Packet*);
 	Packet* deque();
-	inline long getCurrentTime() {
-		struct timeval tv;
-		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-	}
-	double adj_counters(); // adjast counters before enqueue and dequeue, return 0 if timer2 is still running
+	static int get_occupied_mem(int id); // get threshold of queue id
+	static double get_threshold(int id); // get threshold of queue id
+
+	PacketQueue* q_;
+	int adj_counters(); // adjast counters before enqueue and dequeue, return 0 if timer2 is still running
 	static EnhancedSharedMemory* all_queue[MAX_LINK_NUM]; /* store all of the queues */
 	static int queue_num; /* the number of queues */
+	int queue_id;
 	int counter1; // value of counter1
 	int counter2; // value of counter2
-	long trigger_time1; // trigger time of timer1 in milliseconds
-	long trigger_time2; // trigger time of timer2 in milliseconds
+	double trigger_time1; // trigger time of timer1 in milliseconds
+	double trigger_time2; // trigger time of timer2 in milliseconds
 };
 
 #endif
