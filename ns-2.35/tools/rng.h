@@ -169,7 +169,7 @@ public:
 	  random number with more bits of resolution (53 bits if machine
 	  follows IEEE 754 standard) instead of 32 bits, and will advance the
 	  state of the stream by 2 steps instead of 1. More precisely, if s is
-	  a stream of the class RngStream, in the non­ antithetic case, the
+	  a stream of the class RngStream, in the non? antithetic case, the
 	  instruction ``u = s.RandU01()'' will be equivalent to ``u =
 	  (s.RandU01() + s.RandU01() * fact) % 1.0'' where the constant fact
 	  is equal to 2 -24 . This also applies when calling RandU01
