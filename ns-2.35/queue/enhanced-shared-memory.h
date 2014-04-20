@@ -41,22 +41,9 @@
 #include <sys/time.h>
 #include "queue.h"
 #include "config.h"
-#include "shared-memory.h"
 #include "scheduler.h"
+#include "myhead.h"
 
-#define MAX_LINK_NUM 100 // maximum number of link
-#define SWITCH_PORTS 3 // the number of switch ports
-#define ALPHA 0.5
-#define BUFFER_SIZE 100
-#define COUNTER1 2
-#define COUNTER2 13
-#define INIT_TIMER1 30	// timer in milliseconds
-#define INIT_TIMER2 100  // timer in milliseconds
-#define NOW_TIME Scheduler::instance().clock() * 1000
-
-/*
- * A bounded, drop-tail queue
- */
 class EnhancedSharedMemory : public Queue {
   public:
 	EnhancedSharedMemory() {

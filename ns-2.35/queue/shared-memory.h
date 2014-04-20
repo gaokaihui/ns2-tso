@@ -40,15 +40,8 @@
 #include <string.h>
 #include "queue.h"
 #include "config.h"
+#include "myhead.h"
 
-#define MAX_LINK_NUM 100 // maximum number of link
-#define SWITCH_PORTS 3 // the number of switch ports
-#define ALPHA 0.5
-#define BUFFER_SIZE 100
-
-/*
- * A bounded, drop-tail queue
- */
 class SharedMemory : public Queue {
   public:
 	SharedMemory() { 

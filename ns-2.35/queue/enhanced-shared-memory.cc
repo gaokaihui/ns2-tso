@@ -55,9 +55,11 @@ void EnhancedSharedMemory::enque(Packet* p)
 		drop(p);
 	} else {
 		q_->enque(p);
-		if (queue_id == 2)
-			// printf("time:%f enqueue counter1:%d counter2:%d trigger_time1:%f trigger_time2: %f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
+		if (queue_id == 0)
+			printf("time:%.2f enqueue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
 		if ( trigger_time2 < 0 ) {
+			counter2 = counter2 - counter1;
+			counter2 = counter2 < 0 ? 0 : counter2;
 			counter1 = 0;
 			if (++counter2 >= COUNTER2) {
 				long now_time = NOW_TIME;
