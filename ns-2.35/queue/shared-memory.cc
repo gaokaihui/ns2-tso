@@ -110,6 +110,8 @@ void SharedMemory::enque(Packet* p)
 			q_->length() >= get_threshold(queue_id) )
 	{
 		drop(p);
+		// drop time queue_id queue length 
+		printf("d %f %d %d\n", NOW_TIME/1000.0, queue_id, get_occupied_mem(queue_id));
 	} else {
 		q_->enque(p);
 	}
