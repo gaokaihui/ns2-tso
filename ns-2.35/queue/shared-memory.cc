@@ -8,8 +8,7 @@
  * are met:
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
+ * 2. Redistributions in binary form must reproduce the above copyright *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
@@ -111,7 +110,7 @@ void SharedMemory::enque(Packet* p)
 	{
 		drop(p);
 		// drop time queue_id queue length utilization
-		quelen = get_occupied_mem(queue_id);
+		int quelen = get_occupied_mem(queue_id);
 		printf("d %f %d %d %.3f\n", NOW_TIME/1000.0, queue_id, quelen, 1.0*quelen/BUFFER_SIZE);
 	} else {
 		q_->enque(p);

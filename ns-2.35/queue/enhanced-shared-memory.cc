@@ -54,7 +54,7 @@ void EnhancedSharedMemory::enque(Packet* p)
 	if (get_occupied_mem(queue_id) >= BUFFER_SIZE ||
 			q_->length() >= threshold ) {
 		drop(p);
-		quelen = get_occupied_mem(queue_id);
+		int quelen = get_occupied_mem(queue_id);
 		printf("d %f %d %d %.3f\n", NOW_TIME/1000.0, queue_id, quelen, 1.0*quelen/BUFFER_SIZE);
 		is_drop = 1;
 		// if (queue_id == 0)
