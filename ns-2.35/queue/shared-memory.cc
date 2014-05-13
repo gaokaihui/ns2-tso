@@ -81,9 +81,18 @@ SharedMemory::command(int argc, const char*const* argv)
 	return Queue::command(argc, argv);
 }
 
-/*
- * drop-tail
- */
+
+void SharedMemory::printque(char pre)
+{
+	if (DISQUE < 0) {
+		return ;
+	} else if (DISQUE == 0 && pre != 'd') {
+		return ;
+	}
+	int quelen = get_occupied_mem(queue_id);
+	printf("%c %f %d %d %d %.3f\n", pre, NOW_TIME/1000.0, queue_id, all_queue[queue_id] -> q_->length(), quelen, 1.0*quelen/BUFFER_SIZE);
+}
+
 void SharedMemory::enque(Packet* p)
 {
 	if (summarystats) {
@@ -105,15 +114,17 @@ void SharedMemory::enque(Packet* p)
 	// } else {
 	//		q_->enque(p);
 	// }
+	int quelen = get_occupied_mem(queue_id);
 	if (get_occupied_mem(queue_id) >= BUFFER_SIZE ||
 			q_->length() >= get_threshold(queue_id) )
 	{
 		drop(p);
 		// drop time queue_id queue length utilization
-		int quelen = get_occupied_mem(queue_id);
-		printf("d %f %d %d %.3f\n", NOW_TIME/1000.0, queue_id, quelen, 1.0*quelen/BUFFER_SIZE);
+		printque('d');
 	} else {
 		q_->enque(p);
+		if (DISQUE)
+			printque('+');
 	}
 
 }
@@ -148,6 +159,9 @@ Packet* SharedMemory::deque()
         // Queue::updateStats(qib_?q_->byteLength():q_->length());
         Queue::updateStats(q_->length());
     }
+	int quelen = get_occupied_mem(queue_id);
+	if (DISQUE)
+		printque('-');
 	return q_->deque();
 }
 

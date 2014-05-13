@@ -66,6 +66,7 @@ class SharedMemory : public Queue {
 	void shrink_queue();	// To shrink queue and drop excessive packets.
 	static int get_occupied_mem(int id); // get threshold of queue id
 	static double get_threshold(int id); // get threshold of queue id
+	void printque(char pre);
 
 	PacketQueue *q_;	/* underlying FIFO queue */
 	// int drop_front_;	/* drop-from-front (rather than from tail) */

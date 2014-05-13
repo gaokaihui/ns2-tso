@@ -25,4 +25,8 @@ const double INIT_TIMER1 = 500 * (1 + ALPHA * SWITCH_PORTS) / ((1 + ALPHA * SWIT
 const double INIT_TIMER2 = MB_DU;  // timer in milliseconds
 #define NOW_TIME Scheduler::instance().clock() * 1000
 
+// whether to display queue info
+#define DISQUE 0
+
+
 #endif

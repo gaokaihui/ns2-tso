@@ -65,6 +65,7 @@ class EnhancedSharedMemory : public Queue {
 	Packet* deque();
 	static int get_occupied_mem(int id); // get threshold of queue id
 	static double get_threshold(int id); // get threshold of queue id
+	void printque(char pre);
 
 	PacketQueue* q_;
 	int adj_counters(); // adjast counters before enqueue and dequeue, return 0 if timer2 is still running

@@ -46,6 +46,16 @@ int EnhancedSharedMemory::adj_counters()
 /*
  * drop-tail
  */
+void EnhancedSharedMemory::printque(char pre)
+{
+	if (DISQUE < 0) {
+		return ;
+	} else if (DISQUE == 0 && pre != 'd') {
+		return ;
+	}
+	int quelen = get_occupied_mem(queue_id);
+	printf("%c %f %d %d %d %.3f\n", pre, NOW_TIME/1000.0, queue_id, all_queue[queue_id] -> q_->length(), quelen, 1.0*quelen/BUFFER_SIZE);
+}
 void EnhancedSharedMemory::enque(Packet* p)
 {
 	double threshold = adj_counters()?get_threshold(queue_id):BUFFER_SIZE;
@@ -54,8 +64,7 @@ void EnhancedSharedMemory::enque(Packet* p)
 	if (get_occupied_mem(queue_id) >= BUFFER_SIZE ||
 			q_->length() >= threshold ) {
 		drop(p);
-		int quelen = get_occupied_mem(queue_id);
-		printf("d %f %d %d %.3f\n", NOW_TIME/1000.0, queue_id, quelen, 1.0*quelen/BUFFER_SIZE);
+		printque('d');
 		is_drop = 1;
 		// if (queue_id == 0)
 		//	printf("time:%.8f dropped counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
@@ -63,6 +72,7 @@ void EnhancedSharedMemory::enque(Packet* p)
 		// if (queue_id == 0)
 		//	printf("time:%.8f enqueue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
 		q_->enque(p);
+		printque('+');
 	}
 
 	if ( trigger_time2 < 0 ) {
@@ -89,6 +99,8 @@ Packet* EnhancedSharedMemory::deque()
 	adj_counters();
 
 	Packet* result = q_->deque();
+	int quelen = get_occupied_mem(queue_id);
+	printque('-');
 	if( result != 0 ) {
 		if (trigger_time2 < 0) {
 			if (++counter1 >= COUNTER1) {
