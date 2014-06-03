@@ -359,7 +359,7 @@ Copyright (C) 2008 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/wikiserver/DanfengShan/ns-allinone/tclcl-1.20'
+ac_pwd='/home/dfshan/programs/ns-allinone/tclcl-1.20'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 test -n "$AWK" || AWK=awk
@@ -541,23 +541,23 @@ S["V_LIB"]=" -lnsl -ldl"
 S["V_TAR_EXTRA"]=""
 S["V_CCOPT"]=" -Wall -Wno-write-strings -Wno-parentheses"
 S["V_ALL"]="libtclcl.a"
-S["V_LIB_TK"]="-L/home/wikiserver/DanfengShan/ns-allinone/lib -ltk8.5"
-S["V_LIB_TCL"]="-L/home/wikiserver/DanfengShan/ns-allinone/lib -ltcl8.5"
-S["V_LIB_OTCL"]="-L/home/wikiserver/DanfengShan/ns-allinone/otcl-1.14 -lotcl"
+S["V_LIB_TK"]="-L/home/dfshan/programs/ns-allinone/lib -ltk8.5"
+S["V_LIB_TCL"]="-L/home/dfshan/programs/ns-allinone/lib -ltcl8.5"
+S["V_LIB_OTCL"]="-L/home/dfshan/programs/ns-allinone/otcl-1.14 -lotcl"
 S["V_LIB_TCLCL"]=""
 S["V_TAR_TARGET"]="linux-gnu"
 S["V_STATIC"]=""
 S["V_DEFINES"]="-DHAVE_ZLIB_H -DHAVE_LIBOTCL1_14 -DHAVE_OTCL_H -DHAVE_LIBTK8_5 -DHAVE_TK_H -DHAVE_LIBTCL8_5 -DHAVE_TCLINT_H -DHAVE_TCL_H "
-S["V_LIBS"]="-L/home/wikiserver/DanfengShan/ns-allinone/otcl-1.14 -lotcl -L/home/wikiserver/DanfengShan/ns-allinone/lib -ltk8.5 -L/home/wikiserver/DanfengShan/ns"\
-"-allinone/lib -ltcl8.5"
-S["V_INCLUDES"]="-I/usr/include -I/home/wikiserver/DanfengShan/ns-allinone/otcl-1.14 -I/home/wikiserver/DanfengShan/ns-allinone/include -I/home/wikiserver/DanfengSha"\
-"n/ns-allinone/include -I/home/wikiserver/DanfengShan/ns-allinone/include"
+S["V_LIBS"]="-L/home/dfshan/programs/ns-allinone/otcl-1.14 -lotcl -L/home/dfshan/programs/ns-allinone/lib -ltk8.5 -L/home/dfshan/programs/ns-allinone/lib -ltcl8."\
+"5"
+S["V_INCLUDES"]="-I/usr/include -I/home/dfshan/programs/ns-allinone/otcl-1.14 -I/home/dfshan/programs/ns-allinone/include -I/home/dfshan/programs/ns-allinone/include"\
+" -I/home/dfshan/programs/ns-allinone/include"
 S["V_LIB_X11"]="-lXext -lX11"
 S["V_INCLUDE_X11"]=""
 S["V_LIBRARY_TK"]="../lib/tk8.5"
 S["V_TKDOSNAMES"]="$(LIBRARY_TK)/optMenu.tcl $(LIBRARY_TK)/scrlbar.tcl"
 S["V_LIBRARY_TCL"]="../lib/tcl8.5"
-S["V_TCLSH"]="/home/wikiserver/DanfengShan/ns-allinone/bin/tclsh8.5"
+S["V_TCLSH"]="/home/dfshan/programs/ns-allinone/bin/tclsh8.5"
 S["V_TCL_LIBRARY_FILES"]="$(TCL_BASE_LIBRARY_FILES) ../lib/tcl8.5/http1.0/http.tcl"
 S["RANLIB"]="ranlib"
 S["EGREP"]="/bin/grep -E"

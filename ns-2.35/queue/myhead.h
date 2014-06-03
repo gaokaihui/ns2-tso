@@ -3,9 +3,9 @@
 #define MY_HEAD_H_
 
 #define PKT_SIZE 850// B
-#define MB_DU 300 // microburst duration
+#define MB_DU 50 // microburst duration
 #define REAL_CAPACITY 1000 // Mbps
-#define REAL_BUFFER_SIZE 16 //MB
+#define REAL_BUFFER_SIZE 1 //MB
 
 #define MAX_LINK_NUM 100 // maximum number of link
 #define SWITCH_PORTS 16 // the number of switch ports
