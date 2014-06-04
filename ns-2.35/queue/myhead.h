@@ -26,6 +26,8 @@ const double INIT_TIMER2 = MB_DU;  // timer in milliseconds
 #define NOW_TIME Scheduler::instance().clock() * 1000
 
 // whether to display queue info
+// 0: only drop info
+// negative: display no info
 #define DISQUE 0
 
 
