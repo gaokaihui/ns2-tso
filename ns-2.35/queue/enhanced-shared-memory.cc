@@ -66,11 +66,11 @@ void EnhancedSharedMemory::enque(Packet* p)
 		drop(p);
 		printque('d');
 		is_drop = 1;
-		// if (queue_id == 0)
-		//	printf("time:%.8f dropped counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
+		// if (queue_id == 3)
+			// printf("time:%.8f dropped counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
 	} else {
-		// if (queue_id == 0)
-		//	printf("time:%.8f enqueue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
+		// if (queue_id == 3)
+			// printf("time:%.8f enqueue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
 		q_->enque(p);
 		printque('+');
 	}

@@ -3,7 +3,7 @@
 #define MY_HEAD_H_
 
 #define PKT_SIZE 850// B
-#define MB_DU 50 // microburst duration
+#define MB_DU 50 // microburst duration, in ms
 #define REAL_CAPACITY 1000 // Mbps
 #define REAL_BUFFER_SIZE 1 //MB
 
