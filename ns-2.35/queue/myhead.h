@@ -3,7 +3,7 @@
 #define MY_HEAD_H_
 
 #define PKT_SIZE 850// B
-#define MB_DU 50 // microburst duration, in ms
+#define MB_DU 10 // microburst duration, in ms
 #define REAL_CAPACITY 1000 // Mbps
 #define REAL_BUFFER_SIZE 1 //MB
 
@@ -21,7 +21,7 @@ const int BUFFER_SIZE = REAL_BUFFER_SIZE * 1000000 / PKT_SIZE;
 const int COUNTER2 = (int) ALPHA * BUFFER_SIZE_ / ((1 + ALPHA*SWITCH_PORTS/2.0) * (1 + ALPHA*SWITCH_PORTS/2.0));
 #define COUNTER2_  (ALPHA * BUFFER_SIZE_ / ((1 + ALPHA*SWITCH_PORTS/2.0) * (1 + ALPHA*SWITCH_PORTS/2.0)))
 // const double INIT_TIMER1 = 1000.0 * COUNTER2_ / CAPACITY_;
-const double INIT_TIMER1 = 500 * (1 + ALPHA * SWITCH_PORTS) / ((1 + ALPHA * SWITCH_PORTS / 2.0) * (1 + ALPHA * SWITCH_PORTS / 2.0));
+const double INIT_TIMER1 = MB_DU * (1 + ALPHA * SWITCH_PORTS) / ((1 + ALPHA * SWITCH_PORTS / 2.0) * (1 + ALPHA * SWITCH_PORTS / 2.0));
 const double INIT_TIMER2 = MB_DU;  // timer in milliseconds
 #define NOW_TIME Scheduler::instance().clock() * 1000
 
