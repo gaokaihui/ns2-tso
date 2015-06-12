@@ -71,6 +71,7 @@ class EnhancedSharedMemory : public Queue {
 	int adj_counters(); // adjast counters before enqueue and dequeue, return 0 if timer2 is still running
 	static EnhancedSharedMemory* all_queue[MAX_LINK_NUM]; /* store all of the queues */
 	static int queue_num; /* the number of queues */
+	static int edt_num; /* the number of ports in edt state */
 	int queue_id;
 	int counter1; // value of counter1
 	int counter2; // value of counter2

@@ -8,6 +8,7 @@ static const char rcsid[] =
 // initialize the static members
 EnhancedSharedMemory* EnhancedSharedMemory::all_queue[MAX_LINK_NUM] = {NULL};
 int EnhancedSharedMemory::queue_num = 0;
+int EnhancedSharedMemory::edt_num = 0;
 
 static class EnhancedSharedMemoryClass : public TclClass {
  public:
@@ -17,30 +18,30 @@ static class EnhancedSharedMemoryClass : public TclClass {
 	}
 } class_enhanced_shared_memory;
 
+
 int EnhancedSharedMemory::adj_counters()
 {
 	double now_time = NOW_TIME;
 	double elasped_time1 = now_time - trigger_time1;
 	double elasped_time2 = now_time - trigger_time2;
 
-	// adjust timer1
+	// adjust timer1: the traffic is not bursty
 	if(trigger_time2 < 0 && elasped_time1 >= INIT_TIMER1) {
 		counter1 = 0;
 		counter2 = 0;
-		trigger_time1 = now_time - (elasped_time1 - elasped_time1 / INIT_TIMER1 * INIT_TIMER1);
+		trigger_time1 = now_time;
 	}
 
-	// adjust timer2
-	if(trigger_time2 > 0 && elasped_time2 >= INIT_TIMER2) {
+	// adjust timer2: timeout, change to controlled state
+	if(trigger_time2 >= 0 && elasped_time2 >= INIT_TIMER2) {
 		trigger_time2 = -1; 
 		trigger_time1 = now_time;
 		counter1 = 0;
 		counter2 = 0;
+		edt_num --;
 	}
 
-	if(trigger_time2 >= 0)
-		return 0;
-	return 1;
+	return (trigger_time2 >= 0 ? 0 : 1);
 }
 
 /*
@@ -58,14 +59,27 @@ void EnhancedSharedMemory::printque(char pre)
 }
 void EnhancedSharedMemory::enque(Packet* p)
 {
-	double threshold = adj_counters()?get_threshold(queue_id):BUFFER_SIZE;
+	double threshold = adj_counters()?get_threshold(queue_id):(BUFFER_SIZE/edt_num);
 
 	int is_drop = 0;
-	if (get_occupied_mem(queue_id) >= BUFFER_SIZE ||
-			q_->length() >= threshold ) {
+	if (get_occupied_mem(queue_id) >= BUFFER_SIZE) {
 		drop(p);
 		printque('d');
 		is_drop = 1;
+		/*Buffer overflows, change to controlled state*/
+		if (trigger_time2 > 0) {
+			trigger_time2 = -1;
+			trigger_time1 = NOW_TIME;
+			counter1 = 0;
+			counter2 = 0;
+			edt_num --;
+		}
+	} else if (q_->length() >= threshold ) {
+		drop(p);
+		printque('d');
+		is_drop = 1;
+		counter1 = 0;
+		counter2 = 0;
 		// if (queue_id == 3)
 			// printf("time:%.8f dropped counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
 	} else {
@@ -77,18 +91,15 @@ void EnhancedSharedMemory::enque(Packet* p)
 
 	if ( trigger_time2 < 0 ) {
 		if (!is_drop) {
-			counter2 = counter2 - counter1;
-			counter2 = counter2 < 0 ? 0 : counter2;
 			counter1 = 0;
+			/*Change to the uncontrolled state*/
 			if (++counter2 >= COUNTER2) {
 				long now_time = NOW_TIME;
 				trigger_time2 = now_time;
 				trigger_time1 = now_time;
+				edt_num ++;
 				counter2 = 0;
 			}
-		} else {
-			counter1 = 0;
-			counter2 = 0;
 		}
 	}
 
@@ -102,11 +113,19 @@ Packet* EnhancedSharedMemory::deque()
 	int quelen = get_occupied_mem(queue_id);
 	printque('-');
 	if( result != 0 ) {
-		if (trigger_time2 < 0) {
-			if (++counter1 >= COUNTER1) {
+		counter1 ++;
+		if (trigger_time2 >= 0) {
+			/*Port becomes underloaded. Change to the controlled state*/
+			if (counter1 >= COUNTER1) {
 				counter1 = 0;
 				counter2 = 0;
+				trigger_time2 = -1;
+				trigger_time1 = NOW_TIME;
+				edt_num --;
 			}
+		} else {
+			counter2 --;
+			counter2 = (counter2 < 0 ? counter2 : 0);
 		}
 	}
 	return result;

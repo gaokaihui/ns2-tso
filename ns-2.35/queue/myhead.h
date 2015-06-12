@@ -2,17 +2,17 @@
 #ifndef MY_HEAD_H_
 #define MY_HEAD_H_
 
-#define PKT_SIZE 850// B
-#define MB_DU 10 // microburst duration, in ms
+#define PKT_SIZE 1500// B
 #define REAL_CAPACITY 1000 // Mbps
-#define REAL_BUFFER_SIZE 1 //MB
+#define REAL_BUFFER_SIZE 1 // MB
+#define MB_DU 10 // microburst duration, in ms
 
 #define MAX_LINK_NUM 100 // maximum number of link
 #define SWITCH_PORTS 16 // the number of switch ports
 #define ALPHA 1
 // measured by number of packets
-const int BUFFER_SIZE = REAL_BUFFER_SIZE * 1000000 / PKT_SIZE; 
-#define BUFFER_SIZE_ REAL_BUFFER_SIZE * 1000000 / PKT_SIZE
+const int BUFFER_SIZE = REAL_BUFFER_SIZE * 1000 * 1000 / PKT_SIZE; 
+#define BUFFER_SIZE_ (REAL_BUFFER_SIZE * 1000 * 1000 / PKT_SIZE)
 // link capcity, measured by packets/s
 // const int CAPACITY = REAL_CAPACITY * 1000000 / (PKT_SIZE * 8);
 // #define CAPACITY_ (REAL_CAPACITY * 1000000 / (PKT_SIZE * 8))
