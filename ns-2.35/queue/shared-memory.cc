@@ -58,7 +58,7 @@ void SharedMemory::printque(char pre)
 		return ;
 	}
 	int quelen = get_occupied_mem(queue_id);
-	printf("%c %f %d %d %d %.3f\n", pre, NOW_TIME/1000.0, queue_id, all_queue[queue_id] -> q_->length(), quelen, 1.0*quelen/BUFFER_SIZE);
+	printf("%c %f %d %d %d %.3f %d\n", pre, NOW_TIME/1000.0, queue_id, all_queue[queue_id] -> q_->length(), quelen, 1.0*quelen/BUFFER_SIZE, 1);
 }
 
 void SharedMemory::enque(Packet* p)

@@ -65,6 +65,9 @@ class EnhancedSharedMemory : public Queue {
 	Packet* deque();
 	static int get_occupied_mem(int id); // get threshold of queue id
 	static double get_threshold(int id); // get threshold of queue id
+	void to_controlled(); // change to the controlled state
+	void to_uncontrolled(); // change to the uncontrolled state
+	void to_controlled_all(); // change all of the port to the controlled state
 	void printque(char pre);
 
 	PacketQueue* q_;
