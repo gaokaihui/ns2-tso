@@ -474,12 +474,12 @@ Application/Traffic/Exponential set idle_time_ .5
 Application/Traffic/Exponential set rate_ 64Kb
 Application/Traffic/Exponential set packetSize_ 210
 
-Application/Traffic/LogNormal set burst_time_ .05
-Application/Traffic/LogNormal set idle_time_ .05
-Application/Traffic/LogNormal set rate_ 64Kb
-Application/Traffic/LogNormal set packetSize_ 210
-Application/Traffic/LogNormal set ontime_std_ 1
-Application/Traffic/LogNormal set offtime_std_ 1
+Application/Traffic/Lognormal set burst_time_ 500ms
+Application/Traffic/Lognormal set burst_time_std_ 1
+Application/Traffic/Lognormal set idle_time_ 500ms
+Application/Traffic/Lognormal set idle_time_std_ 1
+Application/Traffic/Lognormal set rate_ 64Kb
+Application/Traffic/Lognormal set packetSize_ 210
 
 Application/Traffic/Pareto set burst_time_ 500ms
 Application/Traffic/Pareto set idle_time_ 500ms
