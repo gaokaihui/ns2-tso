@@ -46,6 +46,7 @@ static const char rcsid[] =
  
 #include "random.h"
 #include "trafgen.h"
+#include <math.h>
 
 /* implement an on/off source with average on and off times taken
  * from a lognormal distribution.  (enough of these sources multiplexed
@@ -70,10 +71,20 @@ protected:
 	double rate_;    /* send rate during burst (bps) */
 	double interval_; /* inter-packet time at burst rate */
 	double burstlen_; /* average # packets/burst */
+	double burstlen_std_; /* standard deviation of # packets/burst */
 	unsigned int rem_; /* number of packets remaining in current burst */
-	double l1_;       /* parameter for lognormal distribution to compute
-			   * number of packets in burst.
+	double l_on_avg_;       /* parameter for lognormal distribution: 
+			   * average burst length of corresponding normal distribution.
 		           */
+	double l_on_std_;       /* parameter for lognormal distribution to compute
+			   * standard deviation burst length of corresponding normal distribution.
+			   */
+	double l_off_avg_;       /* parameter for lognormal distribution: 
+			   * average off period of corresponding normal distribution.
+		           */
+	double l_off_std_;       /* parameter for lognormal distribution to compute
+			   * standard deviation off period of corresponding normal distribution.
+			   */
 	int on_;          /* denotes whether in the on or off state */
 
 	// Added by Debojyoti Dutta 13th October 2000
@@ -87,7 +98,30 @@ static class LOGOOTrafficClass : public TclClass {
  	TclObject* create(int, const char*const*) {
 		return (new LOGOO_Traffic());
 	}
-} class_poo_traffic;
+} class_logoo_traffic;
+
+
+/*
+ * Given the average and standard deviation of a lognormal distribution,
+ * calculate the average  of its corresponding normal distribution
+ */
+double avg_normal(double avg, double std) {
+	double var = std * std;
+	double temp = 1 + var / (avg * avg);
+	temp = log(avg) - 0.5 * log(temp);
+	return temp;
+}
+
+/*
+ * Given the average and standard deviation of a lognormal distribution,
+ * calculate the standard deviation of its corresponding normal distribution
+ */
+double std_normal(double avg, double std) {
+	double temp = (std / avg) * (std / avg);
+	temp = log(1 + temp);
+	temp = sqrt(temp);
+	return temp;
+}
 
 // Added by Debojyoti Dutta October 12th 2000
 // This is a new command that allows us to use 
@@ -124,9 +158,13 @@ void LOGOO_Traffic::init()
 {
 	interval_ = (double)(size_ << 3)/(double)rate_;
 	burstlen_ = ontime_/interval_;
+	burstlen_std_ = ontime_std_/interval_;
+	l_on_avg_ = avg_normal(burstlen_, burstlen_std_);
+	l_on_std_ = avg_normal(burstlen_, burstlen_std_);
+	l_off_avg_ = avg_normal(offtime_, offtime_std_);
+	l_off_std_ = avg_normal(offtime_, offtime_std_);
 	rem_ = 0;
 	on_ = 0;
-	l1_ = ontime_std_/interval_;
 	if (agent_)
 		/* dfshan: I don't want to change this.
 		 * But if one want to, he need to first add a packet type in "common/packet.h".
@@ -143,22 +181,22 @@ double LOGOO_Traffic::next_interval(int& size)
 	if (rem_ == 0) {
 		/* compute number of packets in next burst */
 		if(rng_ == 0){
-			rem_ = int(Random::lognormal(burstlen_, l1_) + .5);
+			rem_ = int(Random::lognormal(l_on_avg_, l_on_std_) + .5);
 		}
 		else{
 			// Added by Debojyoti Dutta 13th October 2000
-			rem_ = int(rng_->lognormal(burstlen_, l1_) + .5);
+			rem_ = int(rng_->lognormal(l_on_avg_, l_on_std_) + .5);
 		}
 		/* make sure we got at least 1 */
 		if (rem_ == 0)
 			rem_ = 1;	
 		/* start of an idle period, compute idle time */
 		if(rng_ == 0){
-			t += Random::lognormal(offtime_, offtime_std_);
+			t += Random::lognormal(l_off_avg_, l_off_std_);
 		}
 		else{
 			// Added by Debojyoti Dutta 13th October 2000
-			t += rng_->lognormal(offtime_, offtime_std_);
+			t += rng_->lognormal(l_off_avg_, l_off_std_);
 		}
 		on_ = 0;
 	}	
