@@ -160,9 +160,9 @@ void LOGOO_Traffic::init()
 	burstlen_ = ontime_/interval_;
 	burstlen_std_ = ontime_std_/interval_;
 	l_on_avg_ = avg_normal(burstlen_, burstlen_std_);
-	l_on_std_ = avg_normal(burstlen_, burstlen_std_);
+	l_on_std_ = std_normal(burstlen_, burstlen_std_);
 	l_off_avg_ = avg_normal(offtime_, offtime_std_);
-	l_off_std_ = avg_normal(offtime_, offtime_std_);
+	l_off_std_ = std_normal(offtime_, offtime_std_);
 	rem_ = 0;
 	on_ = 0;
 	if (agent_)
@@ -199,25 +199,11 @@ double LOGOO_Traffic::next_interval(int& size)
 			t += rng_->lognormal(l_off_avg_, l_off_std_);
 		}
 		on_ = 0;
-	}	
+	}
 	rem_--;
 
 	size = size_;
 	return(t);
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
