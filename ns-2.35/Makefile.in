@@ -216,7 +216,7 @@ OBJ_CC = \
         dccp/dccp_tfrc.o \
 	tools/integrator.o tools/queue-monitor.o \
 	tools/flowmon.o tools/loss-monitor.o \
-	queue/queue.o queue/drop-tail.o \
+	queue/queue.o queue/drop-tail.o queue/batching-que.o\
 	adc/simple-intserv-sched.o queue/red.o \
 	queue/semantic-packetqueue.o queue/semantic-red.o \
 	tcp/ack-recons.o \
@@ -623,3 +623,4 @@ test:	force
 makefile.vc:	Makefile.in
 	$(PERL) bin/gen-vcmake.pl < Makefile.in > makefile.vc
 #	$(PERL) -pe 's/^# (\!include)/\!include/o' < Makefile.in > makefile.vc
+queue/batching-que.o: queue/batching-que.h

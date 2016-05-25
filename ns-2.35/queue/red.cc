@@ -151,6 +151,7 @@ REDQueue::REDQueue(const char * trace) : link_(NULL), de_drop_(NULL), EDTrace(NU
 	bind("curq_", &curq_);			    // current queue size
 	bind("cur_max_p_", &edv_.cur_max_p);        // current max_p
 	
+	bind_bool("cedm_", &cedm_);	    // ns-1 compatibility
 
 	q_ = new PacketQueue();			    // underlying queue
 	pq_ = q_;
@@ -416,6 +417,12 @@ Packet* REDQueue::deque()
 	p = q_->deque();
 	if (p != 0) {
 		idle_ = 0;
+		/*added by dfshan*/
+		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
+		if (cedm_ && edp_.setbit && hf->ce() == 1 && 
+				q_->byteLength() < edp_.th_min_pkts * edp_.mean_pktsize) {
+			hf->ce() = 0;
+		}
 	} else {
 		idle_ = 1;
 		// deque() may invoked by Queue::reset at init

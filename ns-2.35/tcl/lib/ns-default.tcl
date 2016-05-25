@@ -106,6 +106,13 @@ Queue/DropTail set mean_pktsize_ 500
 
 Queue/DropTail/PriQueue set Prefer_Routing_Protocols    1
 
+Queue/BatchingQue set drop_front_ false
+Queue/BatchingQue set summarystats_ false
+Queue/BatchingQue set queue_in_bytes_ false
+Queue/BatchingQue set mean_pktsize_ 500
+Queue/BatchingQue set batch_size_ 8000
+Queue/BatchingQue set timeout_ 0
+
 # special cmu implemented priority queue used by DSR
 CMUPriQueue set qlen_logthresh_ 10
 CMUPriQueue set fw_logthresh_ 25
@@ -168,6 +175,8 @@ Queue/RED set bottom_ 0
 ###   for automatic configuration.
 Queue/RED set cautious_ 0
 Queue/RED set feng_adaptive_ 0
+
+Queue/RED set cedm_ false
 
 Queue/RED/RIO set bytes_ false
 Queue/RED/RIO set queue_in_bytes_ false

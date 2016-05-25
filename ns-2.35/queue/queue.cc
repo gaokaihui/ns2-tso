@@ -80,8 +80,9 @@ void PacketQueue::remove(Packet* pkt, Packet *prev) //XXX: screwy
 	return;
 }
 
-void QueueHandler::handle(Event*)
+void QueueHandler::handle(Event* e)
 {
+	// printf("resume sending from even uid:%d\n", e->uid_);
 	queue_.resume();
 }
 
@@ -212,6 +213,7 @@ void Queue::resume()
 	double now = Scheduler::instance().clock();
 	Packet* p = deque();
 	if (p != 0) {
+		blocked_ = 1;
 		target_->recv(p, &qh_);
 	} else {
 		if (unblock_on_resume_) {
