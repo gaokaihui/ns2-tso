@@ -105,7 +105,7 @@ TcpAgent::TcpAgent()
 	bind("dctcp_alpha_", &dctcp_alpha_);
 	bind("dctcp_g_", &dctcp_g_);
 #endif /* TCP_DELAY_BIND_ALL */
-
+	ca_state = TCP_CA_Open;
 }
 
 void
@@ -1131,6 +1131,7 @@ double TcpAgent::increase_param()
 void TcpAgent::opencwnd()
 {
 	double increment;
+	ca_state = TCP_CA_Open;
 	if (cwnd_ < ssthresh_) {
 		/* slow-start (exponential) */
 		cwnd_ += 1;
@@ -1454,6 +1455,7 @@ void TcpAgent::ecn(int seqno)
 		++necnresponses_ ;
 		// added by sylvia to count number of ecn responses 
 	}
+	ca_state = TCP_CA_CWR;
 }
 
 /*

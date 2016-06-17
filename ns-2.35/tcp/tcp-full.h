@@ -122,7 +122,12 @@ public:
         	state_(TCPS_CLOSED), recent_ce_(FALSE),
         	last_state_(TCPS_CLOSED), rq_(rcv_nxt_), last_ack_sent_(-1),
 	        dctcp_total(0), dctcp_marked(0), dctcp_alpha_update_seq(0), 
-	        dctcp_maxseq(0), ce_transition(0) { }
+	        dctcp_maxseq(0), ce_transition(0) {
+		bind_bool("tso_enable_", &tso_enable_);
+		bind("max_tso_size_", &max_tso_size_);
+		bind("tcp_tso_win_divisor_", &tcp_tso_win_divisor_);
+		last_defer_time = 0;
+	}
 
 	~FullTcpAgent() { cancel_timers(); rq_.clear(); }
 	virtual void recv(Packet *pkt, Handler*);
@@ -262,6 +267,18 @@ protected:
 	 * by TcpAgent::reset()
 	 */
 	void set_initial_window();
+
+	/*
+	 * Added by dfshan: turn on TSO or not && maximum TSO size in Bytes
+	 */
+	int tso_enable_;
+	int max_tso_size_;
+	/* The same meaning as kernel systctl: net.ipv4.tcp_tso_win_divisor */
+	int tcp_tso_win_divisor_;
+	/* Whether we should defer sending packets */
+	int tcp_tso_should_defer();
+	double last_defer_time;
+	int sending_tso;
 };
 
 class NewRenoFullTcpAgent : public FullTcpAgent {

@@ -1156,6 +1156,9 @@ send:
                     newstate(TCPS_FIN_WAIT_1);
                 }
         }
+	if (tso_enable_ && datalen > 0 && !sending_tso && tcp_tso_should_defer()) {
+		return 0;
+	}
 	sendpacket(seqno, rcv_nxt_, pflags, datalen, reason);
 
         /*      
@@ -1217,6 +1220,52 @@ send:
 	return (reliable);
 }
 
+int FullTcpAgent::tcp_tso_should_defer() {
+	/* Condition 1: The data allowed to sent (by TCP) is larger than a percentage of the cwnd. */
+    int win = window() * maxseg_;
+	int topwin = curseq_;
+	if ((topwin > highest_ack_ + win) || infinite_send_)
+	    topwin = highest_ack_ + win; 
+	int cwnd_quota = topwin  - t_seqno_;
+	double now_time;
+	if (cwnd_quota >= win / tcp_tso_win_divisor_) {
+		// printf("win: %d cwnd_quota: %d\n", win, cwnd_quota);
+		goto send_now;
+	}
+	/* Condition 2: The data allowed to sent (by TCP) is larger than the maximum tso size. */
+	if (cwnd_quota + headersize() >= max_tso_size_) {
+		// printf("cwnd_quota: %d\n", cwnd_quota);
+		goto send_now;
+	}
+	/* Condition 3: skb to sent is in the middle of write queue */
+	/* Do not consider it here */
+	/* Condition 4:  Connection is not in TCP_CA_open state. */
+	if (fastrecov_ || dupacks_ || ca_state != TCP_CA_Open) {
+		// printf("fastrecov_: %d dupacks_: %d ca_state: %d\n", fastrecov_, int(dupacks_), ca_state);
+		goto send_now;
+	}
+	/* Condition 5: The SKB has FIN flag. */
+	if (outflags() & TH_FIN) {
+		// printf("fin\n");
+		goto send_now;
+	}
+	now_time = now();
+	if (last_defer_time && now_time - last_defer_time > 2 * 0.001) {
+		// printf("last_defer_time: %f now_time: %f\n", last_defer_time, now_time);
+		goto send_now;
+	}
+	/* Condition 6: The SKB has deferred for over 2 clock ticks (2ms in general). */
+	last_defer_time = now();
+	// printf("defered!\n");
+	return 1;
+
+send_now:
+	sending_tso = 1;
+	// printf("not defered!\n");
+	last_defer_time = 0;
+	return 0;
+}
+
 /*
  *
  * send_much: send as much data as we are allowed to.  This is
@@ -1232,6 +1281,7 @@ send:
 void
 FullTcpAgent::send_much(int force, int reason, int maxburst)
 {
+	sending_tso = 0;
 	int npackets = 0;	// sent so far
 
 //if ((int(t_seqno_)) > 1)
@@ -1241,6 +1291,7 @@ FullTcpAgent::send_much(int force, int reason, int maxburst)
 	if (!force && (delsnd_timer_.status() == TIMER_PENDING))
 		return;
 
+	int tamt = 0;
 	while (1) {
 
 		/*
@@ -1251,25 +1302,32 @@ FullTcpAgent::send_much(int force, int reason, int maxburst)
 		 */
 		int amt;
 		int seq = nxt_tseq();
-		if (!force && !send_allowed(seq))
+		if (!force && !send_allowed(seq)) {
 			break;
+		}
 		// Q: does this need to be here too?
 		if (!force && overhead_ != 0 &&
 		    (delsnd_timer_.status() != TIMER_PENDING)) {
 			delsnd_timer_.resched(Random::uniform(overhead_));
 			return;
 		}
-		if ((amt = foutput(seq, reason)) <= 0)
+		if ((amt = foutput(seq, reason)) <= 0) {
 			break;
+		}
 		if ((outflags() & TH_FIN))
 			--amt;	// don't count FINs
+		tamt += amt;
 		sent(seq, amt);
 		force = 0;
 
 		if ((outflags() & (TH_SYN|TH_FIN)) ||
-		    (maxburst && ++npackets >= maxburst))
+		    (maxburst && ++npackets >= maxburst)) {
+			// printf("4\n");
 			break;
+		}
 	}
+	if (tamt > 0)
+		printf("send amount: %d\n", tamt);
 	return;
 }
 
@@ -1494,6 +1552,7 @@ FullTcpAgent::set_initial_window()
 	syn_ = TRUE;	// full-tcp always models SYN exchange
 	TcpAgent::set_initial_window();
 }       
+
 
 /*
  * main reception path - 
@@ -2713,6 +2772,7 @@ FullTcpAgent::timeout_action()
 	dctcp_maxseq = dctcp_alpha_update_seq;
 	fastrecov_ = FALSE;
 	dupacks_ = 0;
+	ca_state = TCP_CA_Loss;
 }
 
 /*
