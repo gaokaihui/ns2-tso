@@ -101,6 +101,8 @@ Queue::Queue() : Connector(), blocked_(0), unblock_on_resume_(1), qh_(*this),
 	bind_bool("unblock_on_resume_", &unblock_on_resume_);
 	bind("util_check_intv_", &util_check_intv_);
 	bind("util_records_", &util_records_);
+	bind_bool("enque_print_qlen_", &enque_print_qlen_); // print queue length at enque
+	bind_bool("deque_print_qlen_", &deque_print_qlen_);  // print queue length when deque
 
 	if (util_records_ > 0) {
 		util_buf_ = new double[util_records_];

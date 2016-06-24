@@ -142,6 +142,7 @@ public:
 	   Returns the maximum of recent measurements stored in util_buf_*/
 	double peak_utilization(void);
 	virtual ~Queue();
+	inline double now() { return Scheduler::instance().clock(); }
 protected:
 	Queue();
 	void reset();
@@ -171,7 +172,8 @@ protected:
 				   stored in memory. One slot in buffer holds
 				   period of util_check_intv_ seconds. */
 	// measuring #drops
-	
+	int enque_print_qlen_; // print queue length when enqueue or dequeue
+	int deque_print_qlen_; // print queue length when enqueue or dequeue
 };
 
 #endif

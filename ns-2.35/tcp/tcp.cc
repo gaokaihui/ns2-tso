@@ -1257,6 +1257,7 @@ TcpAgent::slowdown(int how)
 	double win, halfwin, decreasewin;
 	int slowstart = 0;
 	++ncwndcuts_;
+	ca_state = TCP_CA_CWR;
 	if (!(how & TCP_IDLE) && !(how & NO_OUTSTANDING_DATA)){
 		++ncwndcuts1_; 
 	}
@@ -1455,7 +1456,6 @@ void TcpAgent::ecn(int seqno)
 		++necnresponses_ ;
 		// added by sylvia to count number of ecn responses 
 	}
-	ca_state = TCP_CA_CWR;
 }
 
 /*

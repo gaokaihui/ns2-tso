@@ -151,7 +151,7 @@ REDQueue::REDQueue(const char * trace) : link_(NULL), de_drop_(NULL), EDTrace(NU
 	bind("curq_", &curq_);			    // current queue size
 	bind("cur_max_p_", &edv_.cur_max_p);        // current max_p
 	
-	bind_bool("cedm_", &cedm_);	    // ns-1 compatibility
+	bind_bool("cedm_", &cedm_);	// Use combinded enqueue and dequeue marking
 
 	q_ = new PacketQueue();			    // underlying queue
 	pq_ = q_;
@@ -432,6 +432,9 @@ Packet* REDQueue::deque()
 			idletime_ = Scheduler::instance().clock();
 		else
 			idletime_ = 0.0;
+	}
+	if (deque_print_qlen_) {
+		printf("qlen after deque: %.7lf %d B %d pkts\n", now(), q_->byteLength(), q_->length());
 	}
 	return (p);
 }
@@ -769,6 +772,9 @@ void REDQueue::enque(Packet* pkt)
 				edv_.count_bytes = 0;
 			}
 		}
+	}
+	if (enque_print_qlen_) {
+		printf("qlen after enque: %.7lf %d B %d pkts\n", now(), q_->byteLength(), q_->length());
 	}
 	return;
 }

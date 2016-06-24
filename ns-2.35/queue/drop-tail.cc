@@ -102,6 +102,9 @@ void DropTail::enque(Packet* p)
 	} else {
 		q_->enque(p);
 	}
+	if (enque_print_qlen_) {
+		printf("qlen after enque: %.7lf %d B %d pkts\n", now(), q_->byteLength(), q_->length());
+	}
 }
 
 //AG if queue size changes, we drop excessive packets...
@@ -127,10 +130,14 @@ void DropTail::shrink_queue()
 
 Packet* DropTail::deque()
 {
-        if (summarystats && &Scheduler::instance() != NULL) {
-                Queue::updateStats(qib_?q_->byteLength():q_->length());
-        }
-	return q_->deque();
+	if (summarystats && &Scheduler::instance() != NULL) {
+		Queue::updateStats(qib_?q_->byteLength():q_->length());
+	}
+	Packet* pkt = q_->deque();
+	if (deque_print_qlen_) {
+		printf("qlen after deque: %.7lf %d B %d pkts\n", now(), q_->byteLength(), q_->length());
+	}
+	return pkt;
 }
 
 void DropTail::print_summarystats()

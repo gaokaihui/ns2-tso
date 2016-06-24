@@ -124,6 +124,7 @@ public:
 	        dctcp_total(0), dctcp_marked(0), dctcp_alpha_update_seq(0), 
 	        dctcp_maxseq(0), ce_transition(0) {
 		bind_bool("tso_enable_", &tso_enable_);
+		bind_bool("debug_tso_", &debug_tso_);
 		bind("max_tso_size_", &max_tso_size_);
 		bind("tcp_tso_win_divisor_", &tcp_tso_win_divisor_);
 		last_defer_time = 0;
@@ -277,8 +278,10 @@ protected:
 	int tcp_tso_win_divisor_;
 	/* Whether we should defer sending packets */
 	int tcp_tso_should_defer();
+	int free_window_size();
 	double last_defer_time;
 	int sending_tso;
+	int debug_tso_;
 };
 
 class NewRenoFullTcpAgent : public FullTcpAgent {

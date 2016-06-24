@@ -92,6 +92,9 @@ Queue set acksfirst_ false
 Queue set ackfromfront_ false
 Queue set debug_ false
 
+Queue set deque_print_qlen_ false
+Queue set enque_print_qlen_ false
+
 Queue/SFQ set maxqueue_ 40
 Queue/SFQ set buckets_ 16
 
@@ -1249,6 +1252,7 @@ if [TclObject is-class Agent/TCP/FullTcp] {
         Agent/TCP/FullTcp set debug_ false;  # Added Sept. 16, 2007.
 
 	Agent/TCP/FullTcp set tso_enable_ false;
+	Agent/TCP/FullTcp set debug_tso_ false;
 	Agent/TCP/FullTcp set max_tso_size_ 65536
 	Agent/TCP/FullTcp set tcp_tso_win_divisor_ 3
 

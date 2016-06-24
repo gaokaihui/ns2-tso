@@ -1157,6 +1157,9 @@ send:
                 }
         }
 	if (tso_enable_ && datalen > 0 && !sending_tso && tcp_tso_should_defer()) {
+		if (debug_tso_) {
+			printf("batch debug: delay sending time %.7lf batch size: %d\n", now(), free_window_size());
+		}
 		return 0;
 	}
 	sendpacket(seqno, rcv_nxt_, pflags, datalen, reason);
@@ -1220,13 +1223,18 @@ send:
 	return (reliable);
 }
 
-int FullTcpAgent::tcp_tso_should_defer() {
-	/* Condition 1: The data allowed to sent (by TCP) is larger than a percentage of the cwnd. */
-    int win = window() * maxseg_;
+int FullTcpAgent::free_window_size() {
+	int win = window() * maxseg_;
 	int topwin = curseq_;
 	if ((topwin > highest_ack_ + win) || infinite_send_)
-	    topwin = highest_ack_ + win; 
-	int cwnd_quota = topwin  - t_seqno_;
+		topwin = highest_ack_ + win; 
+	return (topwin  - t_seqno_);
+}
+
+int FullTcpAgent::tcp_tso_should_defer() {
+	/* Condition 1: The data allowed to sent (by TCP) is larger than a percentage of the cwnd. */
+	int win = window() * maxseg_;
+	int cwnd_quota = free_window_size();
 	double now_time;
 	if (cwnd_quota >= win / tcp_tso_win_divisor_) {
 		// printf("win: %d cwnd_quota: %d\n", win, cwnd_quota);
@@ -1320,13 +1328,16 @@ FullTcpAgent::send_much(int force, int reason, int maxburst)
 		sent(seq, amt);
 		force = 0;
 
+		if (debug_tso_) {
+			printf("batch debug: send packet time %.7lf batch size: %d\n", now(), free_window_size());
+		}
 		if ((outflags() & (TH_SYN|TH_FIN)) ||
 		    (maxburst && ++npackets >= maxburst)) {
 			// printf("4\n");
 			break;
 		}
 	}
-	if (tamt > 0)
+	if (debug_tso_ && tamt > 0)
 		printf("send amount: %d\n", tamt);
 	return;
 }
