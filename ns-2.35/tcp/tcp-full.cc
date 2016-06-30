@@ -2442,9 +2442,9 @@ process_ACK:
 		if ((!delay_growth_ || (rcv_nxt_ > 0)) &&
 		    last_state_ == TCPS_ESTABLISHED) {
 			if (!partial || open_cwnd_on_pack_) {
-                           if (!ect_ || !hdr_flags::access(pkt)->ecnecho() || ecn_burst_)
-				opencwnd();
-                        }
+				if (!ect_ || !hdr_flags::access(pkt)->ecnecho() || (dctcp_ && ecn_burst_))
+					opencwnd();
+                }
 		}
 
 		// Mohammad: Detect bursts of ECN marks
