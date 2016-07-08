@@ -152,6 +152,10 @@ REDQueue::REDQueue(const char * trace) : link_(NULL), de_drop_(NULL), EDTrace(NU
 	bind("cur_max_p_", &edv_.cur_max_p);        // current max_p
 	
 	bind_bool("cedm_", &cedm_);	// Use combinded enqueue and dequeue marking
+	bind_bool("slope_", &slope_);	// Use slope-based marking, i.e., mark packets only when queue length increases
+	bind_bool("d_th_", &d_th_);	// Use double threshold
+	bind("s_weight_", &s_w);		    // for EWMA (moving average) of slope
+	bind("th2_", &th2_); // threshold 2
 
 	q_ = new PacketQueue();			    // underlying queue
 	pq_ = q_;
@@ -416,14 +420,28 @@ Packet* REDQueue::deque()
 	}
 	p = q_->deque();
 	if (p != 0) {
+		/* added by dfshan, calculate slope */
+		double now = Scheduler::instance().clock();
+		int qlen = q_->byteLength();
+		if (now > prev_deque_time && qlen != prev_deque_qlen) {
+			double slope = (qlen - prev_deque_qlen) / (now - prev_deque_time);
+			avg_slope = (1 - s_w) * avg_slope + s_w * slope;
+			prev_deque_time = now;
+			prev_deque_qlen = qlen;
+		}
 		idle_ = 0;
 		/*added by dfshan*/
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
-		if (cedm_ && edp_.setbit && hf->ce() == 1 && 
-				q_->byteLength() < edp_.th_min_pkts * edp_.mean_pktsize) {
-			hf->ce() = 0;
+		if (cedm_ && edp_.setbit && hf->ce() == 1) {
+			if (!(d_th_ && q_->byteLength() > th2_)) {
+				if (q_->byteLength() < edp_.th_min_pkts * edp_.mean_pktsize)
+					hf->ce() = 0;
+				else if (slope_ && avg_slope < 0)
+					hf->ce() = 0;
+			}
 		}
 	} else {
+		prev_deque_time = Scheduler::instance().clock();
 		idle_ = 1;
 		// deque() may invoked by Queue::reset at init
 		// time (before the scheduler is instantiated).
@@ -571,6 +589,9 @@ REDQueue::drop_early(Packet* pkt)
 		if (edp_.setbit && hf->ect() && 
 		    (!edp_.use_mark_p || edv_.v_prob1 <= edp_.mark_p)) { // For DCTCP: '<' is changed to '<=' here  
 			hf->ce() = 1; 	// mark Congestion Experienced bit
+			if (slope_ && avg_slope < 0 && !(d_th_ && q_->byteLength() > th2_)) {
+				hf->ce() = 0;
+			}
 			// Tell the queue monitor here - call emark(pkt)
 			return (0);	// no drop
 		} else {

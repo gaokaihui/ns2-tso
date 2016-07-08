@@ -212,7 +212,14 @@ class REDQueue : public Queue {
 	void print_edp();	// for debugging
 	void print_edv();	// for debugging
 
+	double avg_slope; // average slope
+	double prev_deque_time; // remember the time when pervious packet dequeue
+	int prev_deque_qlen; //remember the queue length when previous packet dequeue, in bytes
 	int cedm_; // use CEDM?
+	int slope_; // use slope-based marking? i.e., mark packets only when queue length increases
+	double s_w; // for EWMA (moving average) of slope
+	int d_th_; // double threshold
+	double th2_; // threshold2 in packets
 };
 
 #endif

@@ -180,6 +180,10 @@ Queue/RED set cautious_ 0
 Queue/RED set feng_adaptive_ 0
 
 Queue/RED set cedm_ false
+Queue/RED set slope_ false
+Queue/RED set s_weight_ 0.129
+Queue/RED set d_th_ false
+Queue/RED set th2_ 100
 
 Queue/RED/RIO set bytes_ false
 Queue/RED/RIO set queue_in_bytes_ false
