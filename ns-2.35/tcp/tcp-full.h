@@ -226,7 +226,7 @@ protected:
 	void listen();      		// do passive open
 	void usrclosed();   		// user requested a close
 	int need_send();    		// send ACK/win-update now?
-	int foutput(int seqno, int reason = 0); // output 1 packet
+	int foutput(int seqno, int reason = 0, int force=0); // output 1 packet
 	void newack(Packet* pkt);	// process an ACK
 	int pack(Packet* pkt);		// is this a partial ack?
 	void dooptions(Packet*);	// process option(s)
@@ -277,7 +277,7 @@ protected:
 	/* The same meaning as kernel systctl: net.ipv4.tcp_tso_win_divisor */
 	int tcp_tso_win_divisor_;
 	/* Whether we should defer sending packets */
-	int tcp_tso_should_defer();
+	int tcp_tso_should_defer(int reason);
 	int free_window_size();
 	double last_defer_time;
 	int sending_tso;

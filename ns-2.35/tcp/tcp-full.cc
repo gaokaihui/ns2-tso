@@ -959,7 +959,7 @@ FullTcpAgent::reset_rtx_timer(int /* mild */)
  * seqno, the next seq# we're going to send (snd_nxt)
  */
 int
-FullTcpAgent::foutput(int seqno, int reason)
+FullTcpAgent::foutput(int seqno, int reason, int force)
 {
 	// if maxseg_ not set, set it appropriately
 	// Q: how can this happen?
@@ -1156,7 +1156,7 @@ send:
                     newstate(TCPS_FIN_WAIT_1);
                 }
         }
-	if (tso_enable_ && datalen > 0 && !sending_tso && tcp_tso_should_defer()) {
+	if (!force && tso_enable_ && datalen > 0 && !sending_tso && tcp_tso_should_defer(reason)) {
 		if (debug_tso_) {
 			printf("batch debug: delay sending time %.7lf batch size: %d\n", now(), free_window_size());
 		}
@@ -1225,17 +1225,23 @@ send:
 
 int FullTcpAgent::free_window_size() {
 	int win = window() * maxseg_;
-	int topwin = curseq_;
-	if ((topwin > highest_ack_ + win) || infinite_send_)
-		topwin = highest_ack_ + win; 
+	int topwin = highest_ack_ + win;
 	return (topwin  - t_seqno_);
 }
 
-int FullTcpAgent::tcp_tso_should_defer() {
+int FullTcpAgent::tcp_tso_should_defer(int reason) {
 	/* Condition 1: The data allowed to sent (by TCP) is larger than a percentage of the cwnd. */
 	int win = window() * maxseg_;
 	int cwnd_quota = free_window_size();
 	double now_time;
+	if (reason != REASON_NORMAL)
+		goto send_now;
+	/* There is no in flight packets */
+	if (highest_ack_ >= t_seqno_)
+		goto send_now;
+	/* All data can be sent, there is no need to delay*/
+	if (!infinite_send_ && curseq_ <= highest_ack_ + win)
+		goto send_now;
 	if (cwnd_quota >= win / tcp_tso_win_divisor_) {
 		// printf("win: %d cwnd_quota: %d\n", win, cwnd_quota);
 		goto send_now;
@@ -1264,7 +1270,6 @@ int FullTcpAgent::tcp_tso_should_defer() {
 	}
 	/* Condition 6: The SKB has deferred for over 2 clock ticks (2ms in general). */
 	last_defer_time = now();
-	// printf("defered!\n");
 	return 1;
 
 send_now:
@@ -1319,7 +1324,7 @@ FullTcpAgent::send_much(int force, int reason, int maxburst)
 			delsnd_timer_.resched(Random::uniform(overhead_));
 			return;
 		}
-		if ((amt = foutput(seq, reason)) <= 0) {
+		if ((amt = foutput(seq, reason, force)) <= 0) {
 			break;
 		}
 		if ((outflags() & TH_FIN))
