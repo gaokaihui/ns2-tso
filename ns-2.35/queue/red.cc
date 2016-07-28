@@ -433,7 +433,7 @@ Packet* REDQueue::deque()
 		/*added by dfshan*/
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
 		if (cedm_ && edp_.setbit && hf->ce() == 1) {
-			if (!(d_th_ && q_->byteLength() > th2_)) {
+			if (!(d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize)) {
 				if (q_->byteLength() < edp_.th_min_pkts * edp_.mean_pktsize)
 					hf->ce() = 0;
 				else if (slope_ && avg_slope < 0)
@@ -589,7 +589,8 @@ REDQueue::drop_early(Packet* pkt)
 		if (edp_.setbit && hf->ect() && 
 		    (!edp_.use_mark_p || edv_.v_prob1 <= edp_.mark_p)) { // For DCTCP: '<' is changed to '<=' here  
 			hf->ce() = 1; 	// mark Congestion Experienced bit
-			if (slope_ && avg_slope < 0 && !(d_th_ && q_->byteLength() > th2_)) {
+			if (slope_ && avg_slope < 0 && 
+					!(d_th_ && q_->byteLength() >= th2_* edp_.mean_pktsize)) {
 				hf->ce() = 0;
 			}
 			// Tell the queue monitor here - call emark(pkt)
