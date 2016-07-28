@@ -875,6 +875,10 @@ FullTcpAgent::sendpacket(int seqno, int ackno, int pflags, int datalen, int reas
 	// For DCTCP, ect should be set on all packets
 	if (dctcp_)
 		fh->ect() = ect_;
+	// dfshan: Please make syn packets ecn-capable
+	int syn = (seqno == iss_);
+	if (syn)
+		fh->ect() = 1;
 
 	if (ecn_ && ect_ && recent_ce_ ) { 
 		// This is needed here for the ACK in a SYN, SYN/ACK, ACK
@@ -1236,10 +1240,10 @@ int FullTcpAgent::tcp_tso_should_defer(int reason) {
 	double now_time;
 	if (reason != REASON_NORMAL)
 		goto send_now;
-	/* There is no in flight packets */
+	/* There is no in flight packets, delay sending will result in deadlock */
 	if (highest_ack_ >= t_seqno_)
 		goto send_now;
-	/* All data can be sent, there is no need to delay*/
+	/* All data from application can be sent, there is no need to delay*/
 	if (!infinite_send_ && curseq_ <= highest_ack_ + win)
 		goto send_now;
 	if (cwnd_quota >= win / tcp_tso_win_divisor_) {
