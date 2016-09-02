@@ -42,44 +42,53 @@
 #include "queue.h"
 #include "config.h"
 #include "scheduler.h"
-#include "myhead.h"
+#include "shared-memory.h"
 
-class EnhancedDynamicThreshold : public Queue {
+// maximum number of ports in a switch
+#define MAX_PORT 50
+
+#define EDT_CONTROL 0
+#define EDT_UNCONTROL 1
+
+class EDT: public SharedMemory {
   public:
-	EnhancedDynamicThreshold() {
-		q_ = new PacketQueue;
-		pq_ = q_;
-		counter1 = 0;
-		counter2 = 0;
-		trigger_time1 = NOW_TIME;
-		trigger_time2 = -1;
-		queue_id = queue_num++;
-		all_queue[queue_id] = this;
-	}
-	~EnhancedDynamicThreshold() {
+	EDT();
+	~EDT() {
 		delete q_;
 	}
 
   protected:
+	virtual int command(int argc, const char*const* argv); 
 	void enque(Packet*);
 	Packet* deque();
-	static int get_occupied_mem(int id); // get threshold of queue id
-	static double get_threshold(int id); // get threshold of queue id
+	int get_threshold();
 	void to_controlled(); // change to the controlled state
 	void to_uncontrolled(); // change to the uncontrolled state
 	void to_controlled_all(); // change all of the port to the controlled state
 	void printque(char pre);
-
-	PacketQueue* q_;
 	int adj_counters(); // adjast counters before enqueue and dequeue, return 0 if timer2 is still running
-	static EnhancedDynamicThreshold* all_queue[MAX_LINK_NUM]; /* store all of the queues */
-	static int queue_num; /* the number of queues */
-	static int edt_num; /* the number of ports in edt state */
-	int queue_id;
-	int counter1; // value of counter1
-	int counter2; // value of counter2
-	double trigger_time1; // trigger time of timer1 in milliseconds
-	double trigger_time2; // trigger time of timer2 in milliseconds
+
+	int summarystats;
+	int counter1_; // value of counter1
+	int counter2_; // value of counter2
+	double trigger_time1_; // trigger time of timer1 in seconds
+	double trigger_time2_; // trigger time of timer2 in seconds
+	double timer1_; // initial value of timer 1, in seconds
+	double timer2_; // initial value of timer 2, in seconds
+	int counter1_cn_; // counting number of counter 1
+	int counter2_cn_; // counting number of counter 2
+	int queue_id_;
+	double alpha_; // parameter of DT
+	// 1: display debug info
+	// 0: display only when packets are dropped
+	// -1: does not display
+	int debug_; 
+	int edt_state_;
+
+	/* store all of the queues */
+	static EDT *all_queue_[MAX_BUFF_NUM][MAX_PORT];
+	/* the number of ports in uncontrolled state within a buffer*/
+	static int uncontroll_num_[MAX_BUFF_NUM];
 };
 
 #endif

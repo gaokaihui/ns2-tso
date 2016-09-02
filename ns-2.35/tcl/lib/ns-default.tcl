@@ -107,6 +107,16 @@ Queue/DropTail set mean_pktsize_ 500
 Queue/DropTail/PriQueue set Prefer_Routing_Protocols    1
 
 Queue/SharedMemory set summarystats_ false
+Queue/SharedMemory set queue_in_bytes_ false
+Queue/SharedMemory set mean_pktsize_ 500
+Queue/SharedMemory set log_level_ 0
+Queue/SharedMemory set dt_enable_ false
+Queue/SharedMemory set alpha_ 1
+
+Queue/EDT set timer1_ 0.0021
+Queue/EDT set timer2_ 0.01
+Queue/EDT set counter1_ 3
+Queue/EDT set counter2_ 14
 
 # special cmu implemented priority queue used by DSR
 CMUPriQueue set qlen_logthresh_ 10

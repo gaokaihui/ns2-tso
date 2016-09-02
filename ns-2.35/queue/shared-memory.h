@@ -37,46 +37,54 @@
 #ifndef ns_shared_memory_h
 #define ns_shared_memory_h
 
+// maximum number of shared buffer
+#define MAX_BUFF_NUM 100
+
+#define LOG_ERROR 1
+#define LOG_WARNING 2
+#define LOG_INFO 3
+#define LOG_DEBUG 5
+
 #include <string.h>
 #include "queue.h"
 #include "config.h"
-#include "myhead.h"
 
 class SharedMemory : public Queue {
   public:
-	SharedMemory() { 
-		q_ = new PacketQueue; 
-		pq_ = q_;
-		// bind_bool("drop_front_", &drop_front_);
-		bind_bool("summarystats_", &summarystats);
-		// bind_bool("queue_in_bytes_", &qib_);  // boolean: q in bytes?
-		// bind("mean_pktsize_", &mean_pktsize_);
-		//		_RENAMED("drop-front_", "drop_front_");
-		queue_id = queue_num++;
-		all_queue[queue_id] = this;
-	}
+	SharedMemory();
 	~SharedMemory() {
 		delete q_;
 	}
   protected:
 	void reset();
-	int command(int argc, const char*const* argv); 
-	void enque(Packet*);
-	Packet* deque();
-	void shrink_queue();	// To shrink queue and drop excessive packets.
-	static int get_occupied_mem(int id); // get threshold of queue id
-	static double get_threshold(int id); // get threshold of queue id
+	virtual int command(int argc, const char*const* argv); 
+	virtual void enque(Packet*);
+	virtual Packet* deque();
+	int get_threshold(); // get threshold of this output queue
 	void printque(char pre);
+	inline double now() {
+		return Scheduler::instance().clock();
+	}
 
 	PacketQueue *q_;	/* underlying FIFO queue */
-	// int drop_front_;	/* drop-from-front (rather than from tail) */
 	int summarystats;
-	void print_summarystats();
-	// int qib_;       	/* bool: queue measured in bytes? */
-	// int mean_pktsize_;	/* configured mean packet size in bytes */
-	static SharedMemory* all_queue[MAX_LINK_NUM]; /* store all of the queues */
-	static int queue_num; /* the number of queues */
-	int queue_id; /* every queue has a unique number */
+	int qib_;       	/* bool: queue measured in bytes? */
+	int mean_pktsize_;	/* configured mean packet size in bytes */
+	int buffer_id_; // id of shared buffer
+	int queue_id_; // id of this queue in the shared buffer
+	int dt_enable_; // Use Dynamic Threshold as buffer management policy?
+	double alpha_;
+	// LOG_ERROR: only show error information
+	// LOG_WARNING: show error and info information, e.g., packet dropping is in this scope
+	// LOG_INFO: show detailed information, e.g., packet enqueue is in this scope
+	// LOG_DEBUG: show detailed information
+	// For example, if you only want to see packete dropping event, set log_level_ to LOG_WARNING
+	// If you only want to see both packete dropping and enqueue event, set log_level_ to LOG_INFO
+	int log_level_;
+	static int shared_buffer_size_[MAX_BUFF_NUM]; // shared buffer size, in packets
+	static int shared_buffer_occupancy_[MAX_BUFF_NUM]; // shared buffer occupancy, in packets
+	static int shared_buffer_occu_byte_[MAX_BUFF_NUM]; // shared buffer occupancy, in Bytes
+	static int shared_buffer_qnum_[MAX_BUFF_NUM]; // # of queues attached with each shared buffer
 };
 
 #endif

@@ -5,162 +5,202 @@ static const char rcsid[] =
 
 #include "enhanced-dynamic-threshold.h"
 
-// initialize the static members
-EnhancedDynamicThreshold* EnhancedDynamicThreshold::all_queue[MAX_LINK_NUM] = {NULL};
-int EnhancedDynamicThreshold::queue_num = 0;
-int EnhancedDynamicThreshold::edt_num = 0;
+EDT* EDT::all_queue_[MAX_BUFF_NUM][MAX_PORT] = {NULL};
+int EDT::uncontroll_num_[MAX_BUFF_NUM] = {0};
 
-static class EnhancedDynamicThresholdClass : public TclClass {
+static class EDTClass : public TclClass {
  public:
-	EnhancedDynamicThresholdClass() : TclClass("Queue/EnhancedDynamicThreshold") {}
+	EDTClass() : TclClass("Queue/EDT") {}
 	TclObject* create(int, const char*const*) {
-		return (new EnhancedDynamicThreshold);
+		return (new EDT);
 	}
 } class_enhanced_dynamic_threshold;
 
 
-int EnhancedDynamicThreshold::adj_counters()
+EDT::EDT() : SharedMemory() {
+	bind("timer1_", &timer1_);
+	bind("timer2_", &timer2_);
+	bind("counter1_", &counter1_cn_);
+	bind("counter2_", &counter2_cn_);
+	counter1_ = 0;
+	counter2_ = 0;
+	trigger_time1_ = now();
+	trigger_time2_ = -1;
+	edt_state_ = EDT_CONTROL;
+}
+
+int EDT::command(int argc, const char*const* argv) 
 {
-	double now_time = NOW_TIME;
-	double elasped_time1 = now_time - trigger_time1;
-	double elasped_time2 = now_time - trigger_time2;
+	Tcl& tcl = Tcl::instance();
+	if (argc == 3) {
+		if (strcmp(argv[1], "attach-buffer") == 0) {
+			int id = atoi(argv[2]);
+			if (id < 0 || id >= MAX_BUFF_NUM) {
+				if (log_level_ >= LOG_ERROR)
+					tcl.evalf("puts \"Fail to attach buffer: wrong buffer id: %d\"", id);
+				return (TCL_ERROR);
+			} else {
+				buffer_id_ = id;
+				queue_id_ = SharedMemory::shared_buffer_qnum_[id]++;
+				EDT::all_queue_[id][queue_id_] = this;
+				if (log_level_ >= LOG_DEBUG)
+					tcl.evalf("puts \"Attach port %d to buffer %d\"", queue_id_, id);
+				return (TCL_OK);
+			}
+		}
+	}
+	return Queue::command(argc, argv);
+}
+
+int EDT::adj_counters() {
+	double now_time = now();
+	double elasped_time1 = now_time - trigger_time1_;
+	double elasped_time2 = now_time - trigger_time2_;
 
 	// adjust timer1: the traffic is not bursty
-	if(trigger_time2 < 0 && elasped_time1 >= INIT_TIMER1) {
-		counter1 = 0;
-		counter2 = 0;
-		trigger_time1 = now_time;
+	if(edt_state_ == EDT_CONTROL && elasped_time1 >= timer1_) {
+		counter1_ = 0;
+		counter2_ = 0;
+		trigger_time1_ = now_time;
 	}
 
 	// adjust timer2: timeout, change to controlled state
-	if(trigger_time2 >= 0 && elasped_time2 >= INIT_TIMER2) {
+	if(edt_state_ == EDT_UNCONTROL && elasped_time2 >= timer2_) {
 		to_controlled();
 	}
 
-	return (trigger_time2 >= 0 ? 0 : 1);
+	return (trigger_time2_ >= 0 ? 0 : 1);
 }
 
 /*
  * drop-tail
  */
-void EnhancedDynamicThreshold::printque(char pre)
-{
-	if (DISQUE < 0) {
-		return ;
-	} else if (DISQUE == 0 && pre != 'd') {
-		return ;
-	}
-	int quelen = get_occupied_mem(queue_id);
+void EDT::printque(char pre) {
+	int occupancy = SharedMemory::shared_buffer_occupancy_[buffer_id_];
+	int buffer_size = SharedMemory::shared_buffer_size_[buffer_id_];
 	// <flag> <time in s> <queue id> <queue length in pkts> <occupied buffer size in pkts>
-	printf("%c %f %d %d %d %.3f %d\n", pre, NOW_TIME/1000.0, queue_id, all_queue[queue_id] -> q_->length(), quelen, 1.0*quelen/BUFFER_SIZE, edt_num);
+	// <buffer utilization> <number of ports in uncontrolled state>
+	printf(
+			"%c %f %d %d %d %.3f %d\n",
+			pre, now(), queue_id_,
+			q_->length(), occupancy,
+			1.0 * occupancy / buffer_size,
+			EDT::uncontroll_num_[buffer_id_]);
 }
 
-void EnhancedDynamicThreshold::enque(Packet* p) {
-	double threshold = adj_counters()?get_threshold(queue_id):(1.0 * BUFFER_SIZE/edt_num);
-	/*0: no drop; 1: drop and qlen > threshold  2: drop and buffer overflow*/
-	int is_drop = 0;
-	if (get_occupied_mem(queue_id) > BUFFER_SIZE) {
+void EDT::enque(Packet* p) {
+	adj_counters();
+	int buff_enque, buff_size, qlen_enque, threshold;
+	if (qib_) {
+		buff_enque = SharedMemory::shared_buffer_occu_byte_[buffer_id_] + hdr_cmn::access(p)->size();
+		buff_size = SharedMemory::shared_buffer_size_[buffer_id_] * mean_pktsize_;
+		qlen_enque = q_->byteLength() + hdr_cmn::access(p)->size();
+	} else {
+		buff_enque = SharedMemory::shared_buffer_occupancy_[buffer_id_] + 1;
+		buff_size = SharedMemory::shared_buffer_size_[buffer_id_];
+		qlen_enque = q_->length() + 1;
+	}
+	threshold = get_threshold();
+	if (buff_enque > buff_size) {
 		drop(p);
-		printque('d');
-		is_drop = 2;
-	} else if (q_->length() > threshold) {
+		to_controlled_all();
+		if (log_level_ >= LOG_WARNING)
+			printque('d');
+	} else if (qlen_enque > threshold) {
 		drop(p);
-		printque('d');
-		is_drop = 1;
+		counter1_ = 0;
+		counter2_ = 0;
+		trigger_time1_ = now();
+		if (log_level_ >= LOG_WARNING)
+			printque('d');
 	} else {
 		q_->enque(p);
-		printque('+');
-	}
-	switch (is_drop) {
-		case 0:
-			counter1 = 0;
-			/*Change to the uncontrolled state*/
-			if (trigger_time2 < 0 && ++counter2 >= COUNTER2) {
-				to_uncontrolled();
-			}
-			//if (queue_id == 3)
-			//	printf("time:%.8f enqueue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
-			break;
-		case 1:
-			counter1 = 0;
-			counter2 = 0;
-			break;
-		case 2:
-			/*Buffer overflows, change all ports to controlled state*/
-			to_controlled_all();
-			//if (queue_id == 3)
-			//	printf("time:%.8f dropped counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
-			break;
+		SharedMemory::shared_buffer_occupancy_[buffer_id_] += 1;
+		SharedMemory::shared_buffer_occu_byte_[buffer_id_] += hdr_cmn::access(p)->size();
+		counter1_ = 0;
+		/*Change to the uncontrolled state*/
+		if (edt_state_ == EDT_CONTROL && ++counter2_ >= counter2_cn_) {
+			to_uncontrolled();
+		}
+		if (log_level_ >= LOG_INFO)
+			printque('+');
 	}
 }
 
-Packet* EnhancedDynamicThreshold::deque()
-{
+Packet* EDT::deque() {
 	adj_counters();
-
-	Packet* result = q_->deque();
-	int quelen = get_occupied_mem(queue_id);
-	printque('-');
-	if( result != 0 ) {
-		counter1 ++;
-		if (trigger_time2 >= 0) {
+	Packet* pkt = q_->deque();
+	SharedMemory::shared_buffer_occupancy_[buffer_id_] --;
+	SharedMemory::shared_buffer_occu_byte_[buffer_id_] -= hdr_cmn::access(pkt)->size();
+	if (log_level_ >= LOG_INFO)
+		printque('-');
+	if( pkt != 0 ) {
+		counter1_ ++;
+		if (edt_state_ == EDT_UNCONTROL) {
 			/*Port becomes underloaded. Change to the controlled state*/
-			if (counter1 >= COUNTER1) {
+			if (counter1_ >= counter1_cn_) {
 				to_controlled();
 			}
 		} else {
-			counter2 --;
-			counter2 = (counter2 < 0 ? 0 : counter2);
+			counter2_ --;
+			counter2_ = (counter2_ < 0 ? 0 : counter2_);
 		}
 	}
-	//if (queue_id == 3)
-	//	printf("time:%.8f dequeue counter1:%d counter2:%d trigger_time1:%.2f trigger_time2: %.2f\n", NOW_TIME, counter1, counter2, trigger_time1, trigger_time2);
-	return result;
+	return pkt;
 }
 
-int EnhancedDynamicThreshold::get_occupied_mem(int id)
-{
-	// for this switch, the ports' id are start, start+1, ..., start + SWITCH_PORTS
-	int start = (id / SWITCH_PORTS) * SWITCH_PORTS;
-	int occupy = 0;
-	for(int i = start; i < start + SWITCH_PORTS && i < queue_num; i++ ) {
-		occupy += all_queue[i] -> q_->length();
+int EDT::get_threshold() {
+	int threshold = SharedMemory::shared_buffer_size_[buffer_id_];
+	int free_buffer, buffer_size;
+	switch (edt_state_) {
+		case EDT_CONTROL:
+			if (qib_) {
+				free_buffer = SharedMemory::shared_buffer_size_[buffer_id_] * mean_pktsize_ - SharedMemory::shared_buffer_occu_byte_[buffer_id_];
+			} else {
+				free_buffer = SharedMemory::shared_buffer_size_[buffer_id_] - SharedMemory::shared_buffer_occupancy_[buffer_id_];
+			}
+			threshold = alpha_ * free_buffer;
+			if (log_level_ >= LOG_WARNING && threshold < 0) {
+				Tcl::instance().evalf("puts \"Error: threshold < 0 (free_buffer = %d), which should not be happened.\"", free_buffer);
+			}
+			break;
+		case EDT_UNCONTROL:
+			buffer_size = SharedMemory::shared_buffer_size_[buffer_id_];
+			if (qib_)
+				buffer_size *= mean_pktsize_;
+			threshold = (1.0 * buffer_size / EDT::uncontroll_num_[buffer_id_]);
+			break;
+		default:
+			break;
 	}
-	return occupy;
+	return threshold;
 }
 
-double EnhancedDynamicThreshold::get_threshold(int id)
-{
-	double threshold = get_occupied_mem(id);
-	threshold = ALPHA * (BUFFER_SIZE - threshold);
-	return threshold > 0 ? threshold : 0;
-}
-
-void EnhancedDynamicThreshold::to_controlled() {
-	if (trigger_time2 >= 0 ) {
-		counter1 = 0;
-		counter2 = 0;
-		trigger_time2 = -1;
-		trigger_time1 = NOW_TIME;
-		edt_num --;
-	}
-}
-
-void EnhancedDynamicThreshold::to_uncontrolled() {
-	if (trigger_time2 < 0 ) {
-		long now_time = NOW_TIME;
-		trigger_time2 = now_time;
-		trigger_time1 = now_time;
-		edt_num ++;
-		counter2 = 0;
-		counter1 = 0;
+void EDT::to_controlled() {
+	counter1_ = 0;
+	counter2_ = 0;
+	trigger_time2_ = -1;
+	trigger_time1_ = now();
+	if (edt_state_ == EDT_UNCONTROL) {
+		edt_state_ = EDT_CONTROL;
+		EDT::uncontroll_num_[buffer_id_] --;
 	}
 }
 
-void EnhancedDynamicThreshold::to_controlled_all() {
-	// for this switch, the ports' id are start, start+1, ..., start + SWITCH_PORTS
-	int start = (queue_id / SWITCH_PORTS) * SWITCH_PORTS;
-	for(int i = start; i < start + SWITCH_PORTS && i < queue_num; i++ ) {
-		all_queue[i] -> to_controlled();
+void EDT::to_uncontrolled() {
+	double now_time = now();
+	counter1_ = 0;
+	counter2_ = 0;
+	trigger_time1_ = now_time;
+	trigger_time2_ = now_time;
+	if (edt_state_ == EDT_CONTROL) {
+		edt_state_ = EDT_UNCONTROL;
+		EDT::uncontroll_num_[buffer_id_] ++;
+	}
+}
+
+void EDT::to_controlled_all() {
+	for (int i = 0; i < SharedMemory::shared_buffer_qnum_[buffer_id_]; i++) {
+		EDT::all_queue_[buffer_id_][i]->to_controlled();
 	}
 }
