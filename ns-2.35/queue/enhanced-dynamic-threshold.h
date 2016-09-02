@@ -77,12 +77,6 @@ class EDT: public SharedMemory {
 	double timer2_; // initial value of timer 2, in seconds
 	int counter1_cn_; // counting number of counter 1
 	int counter2_cn_; // counting number of counter 2
-	int queue_id_;
-	double alpha_; // parameter of DT
-	// 1: display debug info
-	// 0: display only when packets are dropped
-	// -1: does not display
-	int debug_; 
 	int edt_state_;
 
 	/* store all of the queues */

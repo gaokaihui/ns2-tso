@@ -56,10 +56,9 @@ class SharedMemory : public Queue {
 		delete q_;
 	}
   protected:
-	void reset();
 	virtual int command(int argc, const char*const* argv); 
-	virtual void enque(Packet*);
-	virtual Packet* deque();
+	void enque(Packet*);
+	Packet* deque();
 	int get_threshold(); // get threshold of this output queue
 	void printque(char pre);
 	inline double now() {
@@ -67,7 +66,6 @@ class SharedMemory : public Queue {
 	}
 
 	PacketQueue *q_;	/* underlying FIFO queue */
-	int summarystats;
 	int qib_;       	/* bool: queue measured in bytes? */
 	int mean_pktsize_;	/* configured mean packet size in bytes */
 	int buffer_id_; // id of shared buffer

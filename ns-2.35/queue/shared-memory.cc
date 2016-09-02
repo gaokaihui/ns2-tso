@@ -24,7 +24,6 @@ SharedMemory::SharedMemory() {
 	q_ = new PacketQueue; 
 	pq_ = q_;
 	queue_id_ = 0;
-	bind_bool("summarystats_", &summarystats);
 	bind_bool("queue_in_bytes_", &qib_);
 	bind("mean_pktsize_", &mean_pktsize_);
 	bind("log_level_", &log_level_);
@@ -32,14 +31,7 @@ SharedMemory::SharedMemory() {
 	bind("alpha_", &alpha_);
 }
 
-void SharedMemory::reset()
-{
-	Queue::reset();
-}
-
-int 
-SharedMemory::command(int argc, const char*const* argv) 
-{
+int SharedMemory::command(int argc, const char*const* argv) {
 	Tcl& tcl = Tcl::instance();
 	if (argc == 3) {
 		if (strcmp(argv[1], "attach-buffer") == 0) {
@@ -52,7 +44,7 @@ SharedMemory::command(int argc, const char*const* argv)
 				buffer_id_ = id;
 				queue_id_ = shared_buffer_qnum_[id] ++;
 				if (log_level_ >= LOG_DEBUG)
-					tcl.evalf("puts \"Attach new queue to buffer %d\"", id);
+					tcl.evalf("puts \"Attach queue %d to buffer %d\"", queue_id_, id);
 				return (TCL_OK);
 			}
 		}
@@ -69,7 +61,7 @@ SharedMemory::command(int argc, const char*const* argv)
 					tcl.evalf("puts \"Fail to set buffer size: wrong buffer size: %d\"", buffer_size);
 				return (TCL_ERROR);
 			} else {
-				shared_buffer_size_[id] = buffer_size;
+				SharedMemory::shared_buffer_size_[id] = buffer_size;
 				if (log_level_ >= LOG_DEBUG)
 					tcl.evalf("puts \"Set buffer %d's size to %d packets\"", id, buffer_size);
 				return (TCL_OK);
@@ -84,30 +76,16 @@ void SharedMemory::printque(char pre)
 {
 	int occupancy = shared_buffer_occupancy_[buffer_id_];
 	int buffer_size = shared_buffer_size_[buffer_id_];
-	printf("%c %f %d %d %.3f %d\n", 
-			pre, now(), q_->length(), occupancy, 1.0 * occupancy / buffer_size, 1);
+	// <flag> <time in s> <queue id> <qlen in pkts> <occupied buffer size in pkts>
+	// <buffer utilization>
+	Tcl::instance().evalf(
+			"puts \"%c %f %d %d %d %.3f %d\"", 
+			pre, now(), queue_id_,
+			q_->length(), occupancy,
+			1.0 * occupancy / buffer_size, 1);
 }
 
-void SharedMemory::enque(Packet* p)
-{
-	if (summarystats) {
-		Queue::updateStats(qib_?q_->byteLength():q_->length());
-	}
-
-	// int qlimBytes = qlim_ * mean_pktsize_;
-	// if ((!qib_ && (q_->length() + 1) >= qlim_) ||
-  	// (qib_ && (q_->byteLength() + hdr_cmn::access(p)->size()) >= qlimBytes)){
-		// if the queue would overflow if we added this packet...
-	//	if (drop_front_) { /* remove from head of queue */
-	//			q_->enque(p);
-	//			Packet *pp = q_->deque();
-	//			drop(pp);
-	//		} else {
-	//			drop(p);
-	//		}
-	// } else {
-	//		q_->enque(p);
-	// }
+void SharedMemory::enque(Packet* p) {
 	int buff_enque, buff_size, qlen_enque, threshold;
 	if (qib_) {
 		buff_enque = shared_buffer_occu_byte_[buffer_id_] + hdr_cmn::access(p)->size();
@@ -127,7 +105,7 @@ void SharedMemory::enque(Packet* p)
 		}
 	} else {
 		q_->enque(p);
-		shared_buffer_occupancy_[buffer_id_] += 1;
+		shared_buffer_occupancy_[buffer_id_] ++;
 		shared_buffer_occu_byte_[buffer_id_] += hdr_cmn::access(p)->size();
 		if (log_level_ >= LOG_INFO)
 			printque('+');
@@ -155,15 +133,13 @@ int SharedMemory::get_threshold() {
 }
 
 
-Packet* SharedMemory::deque()
-{
-    if (summarystats && &Scheduler::instance() != NULL) {
-        Queue::updateStats(qib_?q_->byteLength():q_->length());
-    }
+Packet* SharedMemory::deque() {
 	Packet* p = q_->deque();
-	shared_buffer_occupancy_[buffer_id_] --;
-	shared_buffer_occu_byte_[buffer_id_] -= hdr_cmn::access(p)->size();
-	if (log_level_ >= LOG_INFO)
-		printque('-');
+	if (p != 0) {
+		shared_buffer_occupancy_[buffer_id_] --;
+		shared_buffer_occu_byte_[buffer_id_] -= hdr_cmn::access(p)->size();
+		if (log_level_ >= LOG_INFO)
+			printque('-');
+	}
 	return p;
 }
