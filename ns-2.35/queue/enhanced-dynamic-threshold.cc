@@ -138,17 +138,15 @@ Packet* EDT::deque() {
 		SharedMemory::shared_buffer_occu_byte_[buffer_id_] -= hdr_cmn::access(pkt)->size();
 		if (log_level_ >= LOG_INFO)
 			printque('-');
-		if( pkt != 0 ) {
-			counter1_ ++;
-			if (edt_state_ == EDT_UNCONTROL) {
-				/*Port becomes underloaded. Change to the controlled state*/
-				if (counter1_ >= counter1_cn_) {
-					to_controlled();
-				}
-			} else {
-				counter2_ --;
-				counter2_ = (counter2_ < 0 ? 0 : counter2_);
+		counter1_ ++;
+		if (edt_state_ == EDT_UNCONTROL) {
+			/*Port becomes underloaded. Change to the controlled state*/
+			if (counter1_ >= counter1_cn_) {
+				to_controlled();
 			}
+		} else {
+			counter2_ --;
+			counter2_ = (counter2_ < 0 ? 0 : counter2_);
 		}
 	}
 	return pkt;
