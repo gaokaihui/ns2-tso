@@ -92,8 +92,9 @@ void EDT::printque(char pre) {
 void EDT::enque(Packet* p) {
 	adj_counters();
 	int buff_enque, buff_size, qlen_enque, threshold;
+	int packet_size = HDR_CMN(p)->size();
 	if (qib_) {
-		buff_enque = SharedMemory::shared_buffer_occu_byte_[buffer_id_] + hdr_cmn::access(p)->size();
+		buff_enque = SharedMemory::shared_buffer_occu_byte_[buffer_id_] + packet_size;
 		buff_size = SharedMemory::shared_buffer_size_[buffer_id_] * mean_pktsize_;
 		qlen_enque = q_->byteLength() + hdr_cmn::access(p)->size();
 	} else {
@@ -119,10 +120,10 @@ void EDT::enque(Packet* p) {
 	} else {
 		q_->enque(p);
 		SharedMemory::shared_buffer_occupancy_[buffer_id_] += 1;
-		SharedMemory::shared_buffer_occu_byte_[buffer_id_] += hdr_cmn::access(p)->size();
+		SharedMemory::shared_buffer_occu_byte_[buffer_id_] += packet_size;
 		counter1_ = 0;
 		/*Change to the uncontrolled state*/
-		if (edt_state_ == EDT_CONTROL && ++counter2_ >= counter2_cn_) {
+		if (packet_size > 50 && edt_state_ == EDT_CONTROL && ++counter2_ >= counter2_cn_) {
 			to_uncontrolled();
 		}
 		if (log_level_ >= LOG_INFO)
@@ -134,19 +135,22 @@ Packet* EDT::deque() {
 	adj_counters();
 	Packet* pkt = q_->deque();
 	if (pkt != 0) {
+		int packet_size = HDR_CMN(pkt)->size();
 		SharedMemory::shared_buffer_occupancy_[buffer_id_] --;
-		SharedMemory::shared_buffer_occu_byte_[buffer_id_] -= hdr_cmn::access(pkt)->size();
+		SharedMemory::shared_buffer_occu_byte_[buffer_id_] -= packet_size;
 		if (log_level_ >= LOG_INFO)
 			printque('-');
-		counter1_ ++;
-		if (edt_state_ == EDT_UNCONTROL) {
-			/*Port becomes underloaded. Change to the controlled state*/
-			if (counter1_ >= counter1_cn_) {
-				to_controlled();
+		if (packet_size > 50) {
+			counter1_ ++;
+			if (edt_state_ == EDT_UNCONTROL) {
+				/*Port becomes underloaded. Change to the controlled state*/
+				if (counter1_ >= counter1_cn_) {
+					to_controlled();
+				}
+			} else {
+				counter2_ --;
+				counter2_ = (counter2_ < 0 ? 0 : counter2_);
 			}
-		} else {
-			counter2_ --;
-			counter2_ = (counter2_ < 0 ? 0 : counter2_);
 		}
 	}
 	return pkt;
