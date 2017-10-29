@@ -429,17 +429,26 @@ Packet* REDQueue::deque()
 			prev_deque_time = now;
 			prev_deque_qlen = qlen;
 		}
+		/* end */
 		idle_ = 0;
 		/*added by dfshan*/
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
-		if (cedm_ && edp_.setbit && hf->ce() == 1) {
-			if (!(d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize)) {
-				if (q_->byteLength() < edp_.th_min_pkts * edp_.mean_pktsize)
+		if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
+			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
+				hf->ect() = 1;
+				hf->ce() = 1;
+			} else if (hf->ect() == 0 && hf->ce() == 1) {
+				if ((!slope_ || avg_slope >= 0) &&
+						(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
+					hf->ect() = 1;
+					hf->ce() = 1;
+				} else {
+					hf->ect() = 1;
 					hf->ce() = 0;
-				else if (slope_ && avg_slope < 0)
-					hf->ce() = 0;
+				}
 			}
 		}
+		/* end */
 	} else {
 		prev_deque_time = Scheduler::instance().clock();
 		idle_ = 1;
@@ -581,18 +590,30 @@ REDQueue::drop_early(Packet* pkt)
 			u *= 1.0 / ratio;
 		}
 	}
-	if (u <= edv_.v_prob) {
+	if (cedm_) {
+		hdr_flags* hf = hdr_flags::access(pickPacketForECN(pkt));
+		if (edp_.setbit && hf->ect()) {
+			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
+				hf->ce() = 1;
+				return 0;
+			} else if (!slope_ || avg_slope >= 0) {
+				hf->ect() = 0;
+				hf->ce() = 1;
+				return 0;
+			} else {
+				return 0; // do not drop it, leave it unmarked.
+			}
+		} else {
+			return 1; // drop the packet
+		}
+	} else if (u <= edv_.v_prob) {
 		// DROP or MARK
 		edv_.count = 0;
 		edv_.count_bytes = 0;
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(pkt));
-		if (edp_.setbit && hf->ect() && 
-		    (!edp_.use_mark_p || edv_.v_prob1 <= edp_.mark_p)) { // For DCTCP: '<' is changed to '<=' here  
+		if (edp_.setbit && hf->ect() &&
+			(!edp_.use_mark_p || edv_.v_prob1 <= edp_.mark_p)) { // For DCTCP: '<' is changed to '<=' here
 			hf->ce() = 1; 	// mark Congestion Experienced bit
-			if (slope_ && avg_slope < 0 && 
-					!(d_th_ && q_->byteLength() >= th2_* edp_.mean_pktsize)) {
-				hf->ce() = 0;
-			}
 			// Tell the queue monitor here - call emark(pkt)
 			return (0);	// no drop
 		} else {
