@@ -5,6 +5,10 @@ The implementation follows GNU/Linux 2.6.38.3.
 Note: we only implement colascing data in TCP layer.
 Sending a larger virtual packet into NIC layer and segmentation offload is our future work.
 
+# Example
+In directory `example`, run simulation with script `run_baseline.sh`
+
+
 # How to use
 Use the TCP Agent `Agent/TCP/FullTcp`.
 

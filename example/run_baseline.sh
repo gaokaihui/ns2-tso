@@ -1,0 +1,63 @@
+#!/bin/bash
+NSPATH="$HOME/Programs/ns-allinone/ns-2.35/ns"
+SCRIPT="star-config.tcl"
+SIM_END=1
+# Topology settings
+SNUM=2
+LINK_RATE=10
+if (( $LINK_RATE == 1 )); then
+	RTT=$(awk 'BEGIN{print 37 * 0.001 * 0.001}')
+elif (($LINK_RATE == 10 )); then
+	RTT=$(awk 'BEGIN{print 100 * 0.001 * 0.001}')
+else
+	RTT=$(awk 'BEGIN{print 100 * 0.001 * 0.001}')
+fi
+# End host settings
+SOURCE_ALG=newreno
+DCTCP_G=0.0625
+MIN_RTO=0.01
+TRACE_INTV=$(awk 'BEGIN{print 1 * 0.001 * 0.001}')
+# Switch settings
+ECN_ENABLE=1
+SWITCH_ALG=RED
+Q_WEIGHT=1
+if (( $LINK_RATE == 1 )); then
+	QUEUE_SIZE=87
+	ECN_THRESHOLD=37
+elif (($LINK_RATE == 10 )); then
+	QUEUE_SIZE=1000
+	ECN_THRESHOLD=65
+else
+	QUEUE_SIZE=1000
+	ECN_THRESHOLD=65
+fi
+TSO_ENABLE=1
+QLEN_SAMPLE_INTV=$TRACE_INTV
+SENT_SIZE=$((100*1024*1024))
+#SENT_SIZE=-1
+TRACE_DIR="traces"
+DEBUG_TRACE=0
+QLEN_SAMPLE=0
+
+DCTCP_ENABLE=1
+CEDM_ENABLE=0
+SLOPE_ENABLE=0
+S_WEIGHT=0.129
+DOUBLE_THRESHOLD=0
+THRESHOLD2=100
+
+mkdir -p $TRACE_DIR
+test_dir=$(ls $TRACE_DIR)
+if [ -n "$test_dir" ]; then
+	echo "Directory '$TRACE_DIR' exists!"
+	mkdir -p archive
+	mv $TRACE_DIR archive/${TRACE_DIR}_$(date +"%Y%m%d%H%m%S")
+fi
+mkdir -p $TRACE_DIR
+CMD="$NSPATH $SCRIPT $SIM_END"
+CMD="$CMD $SNUM $LINK_RATE $RTT $SOURCE_ALG $DCTCP_ENABLE $DCTCP_G $MIN_RTO $TRACE_INTV $TSO_ENABLE"
+CMD="$CMD $ECN_ENABLE $QUEUE_SIZE $SWITCH_ALG $Q_WEIGHT $ECN_THRESHOLD $QLEN_SAMPLE_INTV"
+CMD="$CMD $SENT_SIZE $TRACE_DIR $DEBUG_TRACE $QLEN_SAMPLE"
+CMD="$CMD $CEDM_ENABLE $SLOPE_ENABLE $S_WEIGHT $DOUBLE_THRESHOLD $THRESHOLD2"
+echo $CMD
+eval $CMD
