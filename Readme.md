@@ -17,7 +17,7 @@ Enable TSO:
 Agent/TCP/FullTcp set tso_enable_ true
 ```
 
-Change TSO settigns:
+Change TSO settings:
 ```tcl
 # maximum TSO size in Bytes
 Agent/TCP/FullTcp set max_tso_size_ 65536
