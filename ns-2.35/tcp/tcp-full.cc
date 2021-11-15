@@ -126,6 +126,12 @@ static const char rcsid[] =
 #define	FALSE 	0
 #endif
 
+#define TCP_CA_Open 0
+#define TCP_CA_Disorder 1
+#define TCP_CA_CWR 2
+#define TCP_CA_Recovery 3
+#define TCP_CA_Loss 4
+
 /*
  * Tcl Linkage for the following:
  *	Agent/TCP/FullTcp, Agent/TCP/FullTcp/Tahoe,

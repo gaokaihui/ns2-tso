@@ -47,6 +47,12 @@ static const char rcsid[] =
 #include "basetrace.h"
 #include "hdr_qs.h"
 
+#define TCP_CA_Open 0
+#define TCP_CA_Disorder 1
+#define TCP_CA_CWR 2
+#define TCP_CA_Recovery 3
+#define TCP_CA_Loss 4
+
 int hdr_tcp::offset_;
 
 static class TCPHeaderClass : public PacketHeaderClass {

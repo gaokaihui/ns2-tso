@@ -125,11 +125,11 @@ struct hdr_tcp {
 #define TCP_TIMER_Q         4
 #define TCP_TIMER_RESET        5 
 
-#define TCP_CA_Open 0
-#define TCP_CA_Disorder 1
-#define TCP_CA_CWR 2
-#define TCP_CA_Recovery 3
-#define TCP_CA_Loss 4
+// #define TCP_CA_Open 0
+// #define TCP_CA_Disorder 1
+// #define TCP_CA_CWR 2
+// #define TCP_CA_Recovery 3
+// #define TCP_CA_Loss 4
 
 class TcpAgent;
 

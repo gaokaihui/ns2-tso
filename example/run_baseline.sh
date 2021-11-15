@@ -1,5 +1,5 @@
 #!/bin/bash
-NSPATH="$HOME/Programs/ns-allinone/ns-2.35/ns"
+NSPATH="$HOME/microburst_tolerant/ns2-tso/ns-2.35/ns"
 SCRIPT="star-config.tcl"
 SIM_END=1
 # Topology settings
