@@ -68,6 +68,7 @@ static const char rcsid[] =
 #include "flags.h"
 #include "delay.h"
 #include "red.h"
+#include <fstream>
 
 static class REDClass : public TclClass {
 public:
@@ -422,6 +423,19 @@ int REDQueue::get_avg_qlen(int avg_window)
 }
 
 /*
+ * Return the min qlen in the past window of queue.
+ */
+int REDQueue::get_min_qlen(int avg_window)
+{
+	int n_qlen = 10000000;
+	for(int i = 0; i < avg_window; i++){
+		if(qlen_instant[(read_index+i)%100] < n_qlen)
+			n_qlen = qlen_instant[(read_index+i)%100];
+	}
+	return n_qlen;
+}
+
+/*
  * Return the next packet in the queue for transmission.
  */
 Packet* REDQueue::deque()
@@ -443,7 +457,7 @@ Packet* REDQueue::deque()
 		}
 		/* end */
 		/*added by gkh*/
-		int avg_window = 1;
+		int avg_window = 50;
 		//printf("write_index %d %d\n",write_index,read_index);
 		if(write_index == 0 && write_index == read_index){
 			for(int i = 0; i < avg_window; i++){
@@ -455,7 +469,7 @@ Packet* REDQueue::deque()
 		read_index++;
 		write_index %= 100;
 		read_index %= 100;
-		avg_qlen = get_avg_qlen(avg_window);
+		avg_qlen = get_min_qlen(avg_window);
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
 		if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
 			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
@@ -469,6 +483,10 @@ Packet* REDQueue::deque()
 				hf->ce() = 0;
 			}
 		}
+		std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
+		outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
+		outfile.close();
+		/* end */
 
 		// idle_ = 0;
 		// /*added by dfshan*/

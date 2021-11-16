@@ -218,6 +218,7 @@ class REDQueue : public Queue {
 	int read_index;
 	int avg_qlen;
 	int get_avg_qlen(int avg_window);
+	int get_min_qlen(int avg_window);
 
 	double avg_slope; // average slope
 	double prev_deque_time; // remember the time when pervious packet dequeue
