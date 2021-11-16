@@ -1,4 +1,4 @@
-#!/home/dfshan/Programs/ns-allinone/ns-2.35/ns
+#!/home/gaokaihui/microburst_tolerant/ns2-tso/ns-2.35/ns
 #set USAGE "USAGE $argv0 number_of_senders"
 if {$argc != 25} {
 	puts stderr "Wrong number of arguments $argc"

@@ -410,6 +410,18 @@ double REDQueue::estimator(int nqueued, int m, double ave, double q_w)
 }
 
 /*
+ * Return the avg qlen in the past window of queue.
+ */
+int REDQueue::get_avg_qlen(int avg_window)
+{
+	int sum = 0;
+	for(int i = 0; i < avg_window; i++){
+		sum += qlen_instant[(read_index+i)%100];
+	}
+	return sum/avg_window;
+}
+
+/*
  * Return the next packet in the queue for transmission.
  */
 Packet* REDQueue::deque()
@@ -430,24 +442,53 @@ Packet* REDQueue::deque()
 			prev_deque_qlen = qlen;
 		}
 		/* end */
-		idle_ = 0;
-		/*added by dfshan*/
+		/*added by gkh*/
+		int avg_window = 1;
+		//printf("write_index %d %d\n",write_index,read_index);
+		if(write_index == 0 && write_index == read_index){
+			for(int i = 0; i < avg_window; i++){
+				qlen_instant[write_index++] = qlen;
+				write_index %= 100;
+			}
+		}
+		qlen_instant[write_index++] = qlen;
+		read_index++;
+		write_index %= 100;
+		read_index %= 100;
+		avg_qlen = get_avg_qlen(avg_window);
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
 		if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
 			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
 				hf->ect() = 1;
 				hf->ce() = 1;
-			} else if (hf->ect() == 0 && hf->ce() == 1) {
-				if ((!slope_ || avg_slope >= 0) &&
-						(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
-					hf->ect() = 1;
-					hf->ce() = 1;
-				} else {
-					hf->ect() = 1;
-					hf->ce() = 0;
-				}
+			} else if ( avg_qlen >=  edp_.th_min_pkts * edp_.mean_pktsize) {
+				hf->ect() = 1;
+				hf->ce() = 1;
+			} else{
+				hf->ect() = 1;
+				hf->ce() = 0;
 			}
 		}
+
+		// idle_ = 0;
+		// /*added by dfshan*/
+		// hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
+		// if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
+		// 	if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
+		// 		hf->ect() = 1;
+		// 		hf->ce() = 1;
+		// 	} else if (hf->ect() == 0 && hf->ce() == 1) {
+		// 		if ((!slope_ || avg_slope >= 0) &&
+		// 				(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
+		// 			//printf("edp_.th_min_pkts: %lf th2_: %lf size: %d\n", edp_.th_min_pkts, th2_, edp_.mean_pktsize);
+		// 			hf->ect() = 1;
+		// 			hf->ce() = 1;
+		// 		} else {
+		// 			hf->ect() = 1;
+		// 			hf->ce() = 0;
+		// 		}
+		// 	}
+		// }
 		/* end */
 	} else {
 		prev_deque_time = Scheduler::instance().clock();

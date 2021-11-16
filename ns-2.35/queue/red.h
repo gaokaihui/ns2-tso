@@ -212,6 +212,13 @@ class REDQueue : public Queue {
 	void print_edp();	// for debugging
 	void print_edv();	// for debugging
 
+	//added by gkh
+	int qlen_instant[100];
+	int write_index;
+	int read_index;
+	int avg_qlen;
+	int get_avg_qlen(int avg_window);
+
 	double avg_slope; // average slope
 	double prev_deque_time; // remember the time when pervious packet dequeue
 	int prev_deque_qlen; //remember the queue length when previous packet dequeue, in bytes

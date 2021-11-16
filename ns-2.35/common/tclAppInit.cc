@@ -64,6 +64,7 @@ EXTERN int		Tcltest_Init _ANSI_ARGS_((Tcl_Interp *interp));
 extern "C" int
 nslibmain(int argc, char **argv)
 {
+	printf("tclAppInit.cc\n");
     Tcl_Main(argc, argv, Tcl_AppInit);
     return 0;			/* Needed only to prevent compiler warning. */
 }
