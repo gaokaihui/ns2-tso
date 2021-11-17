@@ -213,7 +213,7 @@ class REDQueue : public Queue {
 	void print_edv();	// for debugging
 
 	//added by gkh
-	int qlen_instant[100];
+	int qlen_instant[1000];
 	int write_index;
 	int read_index;
 	int avg_qlen;

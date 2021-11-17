@@ -417,7 +417,7 @@ int REDQueue::get_avg_qlen(int avg_window)
 {
 	int sum = 0;
 	for(int i = 0; i < avg_window; i++){
-		sum += qlen_instant[(read_index+i)%100];
+		sum += qlen_instant[(read_index+i)%1000];
 	}
 	return sum/avg_window;
 }
@@ -429,8 +429,8 @@ int REDQueue::get_min_qlen(int avg_window)
 {
 	int n_qlen = 10000000;
 	for(int i = 0; i < avg_window; i++){
-		if(qlen_instant[(read_index+i)%100] < n_qlen)
-			n_qlen = qlen_instant[(read_index+i)%100];
+		if(qlen_instant[(read_index+i)%1000] < n_qlen)
+			n_qlen = qlen_instant[(read_index+i)%1000];
 	}
 	return n_qlen;
 }
@@ -457,19 +457,21 @@ Packet* REDQueue::deque()
 		}
 		/* end */
 		/*added by gkh*/
-		int avg_window = 50;
-		//printf("write_index %d %d\n",write_index,read_index);
-		if(write_index == 0 && write_index == read_index){
-			for(int i = 0; i < avg_window; i++){
-				qlen_instant[write_index++] = qlen;
-				write_index %= 100;
+		if(cedm_){
+			int avg_window = 20;
+			//printf("write_index %d %d\n",write_index,read_index);
+			if(write_index == 0 && write_index == read_index){
+				for(int i = 0; i < avg_window; i++){
+					qlen_instant[write_index++] = qlen;
+					write_index %= 100;
+				}
 			}
+			qlen_instant[write_index++] = qlen;
+			read_index++;
+			write_index %= 1000;
+			read_index %= 1000;
+			avg_qlen = get_avg_qlen(avg_window);
 		}
-		qlen_instant[write_index++] = qlen;
-		read_index++;
-		write_index %= 100;
-		read_index %= 100;
-		avg_qlen = get_min_qlen(avg_window);
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
 		if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
 			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
@@ -483,9 +485,9 @@ Packet* REDQueue::deque()
 				hf->ce() = 0;
 			}
 		}
-		std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
-		outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
-		outfile.close();
+		// std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
+		// outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
+		// outfile.close();
 		/* end */
 
 		// idle_ = 0;
