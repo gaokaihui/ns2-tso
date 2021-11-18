@@ -213,12 +213,18 @@ class REDQueue : public Queue {
 	void print_edv();	// for debugging
 
 	//added by gkh
-	int qlen_instant[1000];
+	int qlen_instant[1000]; // track the past queue lengths in an ring buffer
 	int write_index;
 	int read_index;
 	int avg_qlen;
 	int get_avg_qlen(int avg_window);
 	int get_min_qlen(int avg_window);
+	int identity_microburst();
+	int judge_by_oscillation_times(int oscillation_length_th, int times_th);
+	int judge_extreme_point(int left_index, int right_index);
+	int mb_identifier_; // use microburst identifier?
+	int past_wnd_length_; // How long has the past queue length been tracked?
+	int mb_state;
 
 	double avg_slope; // average slope
 	double prev_deque_time; // remember the time when pervious packet dequeue

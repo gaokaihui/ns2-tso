@@ -151,6 +151,9 @@ REDQueue::REDQueue(const char * trace) : link_(NULL), de_drop_(NULL), EDTrace(NU
 	bind("prob1_", &edv_.v_prob1);		    // dropping probability
 	bind("curq_", &curq_);			    // current queue size
 	bind("cur_max_p_", &edv_.cur_max_p);        // current max_p
+
+	bind_bool("mb_identifier_", &mb_identifier_);	// Use microburst identifier
+	bind("past_wnd_length_", &past_wnd_length_);
 	
 	bind_bool("cedm_", &cedm_);	// Use combinded enqueue and dequeue marking
 	bind_bool("slope_", &slope_);	// Use slope-based marking, i.e., mark packets only when queue length increases
@@ -422,6 +425,43 @@ int REDQueue::get_avg_qlen(int avg_window)
 	return sum/avg_window;
 }
 
+int REDQueue::judge_extreme_point(int left_index, int right_index)
+{
+	int median = (left_index+right_index)/2;
+	if(qlen_instant[left_index%1000] < qlen_instant[median%1000] && qlen_instant[right_index%1000] < qlen_instant[median%1000]){
+		return 1;
+	}
+	if(qlen_instant[left_index%1000] > qlen_instant[median%1000] && qlen_instant[right_index%1000] > qlen_instant[median%1000]){
+		return 1;
+	}
+	return 0;
+}
+
+int REDQueue::judge_by_oscillation_times(int oscillation_length_th, int times_th)
+{
+    int times = 0;
+	int i = read_index;
+	while(i!=write_index){
+		if( (i+oscillation_length_th-1)%1000 == write_index )
+			break;
+		times += judge_extreme_point(i, i+oscillation_length_th-1);
+		i++;
+		i%=1000;
+	}
+    if (times >= times_th){
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * Return the identify results about microburst
+ */
+int REDQueue::identity_microburst()
+{
+	return judge_by_oscillation_times(7, 6);
+}
+
 /*
  * Return the min qlen in the past window of queue.
  */
@@ -446,6 +486,40 @@ Packet* REDQueue::deque()
 	}
 	p = q_->deque();
 	if (p != 0) {
+		/*added by gkh*/
+		if(mb_identifier_){
+			int qlen = q_->byteLength();
+			qlen_instant[write_index++] = qlen;  // write into the ring buffer 
+			write_index %= 1000;
+			int length_in_ring_buf = (write_index-read_index)%1000; //get the real length in the ring buffer
+			if( length_in_ring_buf >= past_wnd_length_ && identity_microburst()){
+				if(mb_state == 0){
+					edp_.th_min_pkts = edp_.th_min_pkts * 1.6;
+					printf("microburst happened! th: %lf\n", edp_.th_min_pkts * edp_.mean_pktsize);
+					write_index = 0; //clearing the ring buffer to avoid multiple microburst states triggered by one time of oscillation
+					read_index = 0;
+				}
+				mb_state = 1;
+				read_index++; // expired a item
+				read_index%=1000;
+			}
+			hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
+			if (edp_.setbit && (hf->ce() | hf->ect())) {
+				if(qlen > edp_.th_min_pkts * edp_.mean_pktsize){
+					hf->ect() = 1;
+					hf->ce() = 1;
+				}else{
+					hf->ect() = 1;
+					hf->ce() = 0;
+				}
+			}
+		}
+
+		// std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
+		// outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
+		// outfile.close();
+		/* end */
+
 		/* added by dfshan, calculate slope */
 		double now = Scheduler::instance().clock();
 		int qlen = q_->byteLength();
@@ -456,59 +530,24 @@ Packet* REDQueue::deque()
 			prev_deque_qlen = qlen;
 		}
 		/* end */
-		/*added by gkh*/
-		if(cedm_){
-			int avg_window = 20;
-			//printf("write_index %d %d\n",write_index,read_index);
-			if(write_index == 0 && write_index == read_index){
-				for(int i = 0; i < avg_window; i++){
-					qlen_instant[write_index++] = qlen;
-					write_index %= 100;
-				}
-			}
-			qlen_instant[write_index++] = qlen;
-			read_index++;
-			write_index %= 1000;
-			read_index %= 1000;
-			avg_qlen = get_avg_qlen(avg_window);
-		}
+		idle_ = 0;
+		/*added by dfshan*/
 		hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
 		if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
 			if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
 				hf->ect() = 1;
 				hf->ce() = 1;
-			} else if ( avg_qlen >=  edp_.th_min_pkts * edp_.mean_pktsize) {
-				hf->ect() = 1;
-				hf->ce() = 1;
-			} else{
-				hf->ect() = 1;
-				hf->ce() = 0;
+			} else if (hf->ect() == 0 && hf->ce() == 1) {
+				if ((!slope_ || avg_slope >= 0) &&
+						(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
+					hf->ect() = 1;
+					hf->ce() = 1;
+				} else {
+					hf->ect() = 1;
+					hf->ce() = 0;
+				}
 			}
 		}
-		// std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
-		// outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
-		// outfile.close();
-		/* end */
-
-		// idle_ = 0;
-		// /*added by dfshan*/
-		// hdr_flags* hf = hdr_flags::access(pickPacketForECN(p));
-		// if (cedm_ && edp_.setbit && (hf->ce() | hf->ect())) {
-		// 	if (d_th_ && q_->byteLength() >= th2_ * edp_.mean_pktsize) {
-		// 		hf->ect() = 1;
-		// 		hf->ce() = 1;
-		// 	} else if (hf->ect() == 0 && hf->ce() == 1) {
-		// 		if ((!slope_ || avg_slope >= 0) &&
-		// 				(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
-		// 			//printf("edp_.th_min_pkts: %lf th2_: %lf size: %d\n", edp_.th_min_pkts, th2_, edp_.mean_pktsize);
-		// 			hf->ect() = 1;
-		// 			hf->ce() = 1;
-		// 		} else {
-		// 			hf->ect() = 1;
-		// 			hf->ce() = 0;
-		// 		}
-		// 	}
-		// }
 		/* end */
 	} else {
 		prev_deque_time = Scheduler::instance().clock();
@@ -678,6 +717,7 @@ REDQueue::drop_early(Packet* pkt)
 			// Tell the queue monitor here - call emark(pkt)
 			return (0);	// no drop
 		} else {
+			printf("enqueue drop\n");
 			return (1);	// drop
 		}
 	}

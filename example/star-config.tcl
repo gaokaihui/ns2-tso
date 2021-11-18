@@ -1,6 +1,6 @@
 #!/home/gaokaihui/microburst_tolerant/ns2-tso/ns-2.35/ns
 #set USAGE "USAGE $argv0 number_of_senders"
-if {$argc != 25} {
+if {$argc != 27} {
 	puts stderr "Wrong number of arguments $argc"
 	exit 0
 }
@@ -31,6 +31,9 @@ set slope_enable [lindex $argv 21]
 set s_weight [lindex $argv 22]
 set double_threshold [lindex $argv 23]
 set threshold2 [lindex $argv 24]
+
+set mbi_enable [lindex $argv 25]
+set mbi_length [lindex $argv 26]
 
 set hnum [expr $snum + 1]
 if {$ecn_enable} {
@@ -69,6 +72,8 @@ puts "Using double threshold: $double_threshold. Threshold2: ${threshold2}pkts =
 puts "----------- Experiment Traffic ----------"
 puts "Number of senders: $snum"
 puts "Sent size: ${sent_size}B = [expr $sent_size / 1024]KB"
+puts "Using microburst identifier: $mbi_enable"
+puts "How long has the past queue length been tracked: $mbi_length"
 
 Agent/TCP set ecn_ 1
 Agent/TCP set old_ecn_ 1
@@ -139,6 +144,12 @@ if {$double_threshold} {
 	Queue/RED set th2_ $threshold2
 } else {
 	Queue/RED set d_th_ false
+}
+if {$mbi_enable} {
+	Queue/RED set mb_identifier_ true
+	Queue/RED set past_wnd_length_ $mbi_length
+} else {
+	Queue/RED set mb_identifier_ false
 }
 
 DelayLink set avoidReordering_ true
