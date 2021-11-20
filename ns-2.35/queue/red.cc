@@ -514,16 +514,13 @@ Packet* REDQueue::deque()
 				}
 			}
 		}
-
-		// std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
-		// outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<edp_.th_min_pkts * edp_.mean_pktsize<< " "<<th2_ * edp_.mean_pktsize<< "\n";
-		// outfile.close();
 		/* end */
 
 		/* added by dfshan, calculate slope */
 		double now = Scheduler::instance().clock();
 		int qlen = q_->byteLength();
-		if (now > prev_deque_time && qlen != prev_deque_qlen) {
+		//if (now > prev_deque_time && qlen != prev_deque_qlen) {  //gkh: slope = 0 if qlen == prev_deque_qlen; why not to update avg_slope
+		if (now > prev_deque_time){
 			double slope = (qlen - prev_deque_qlen) / (now - prev_deque_time);
 			avg_slope = (1 - s_w) * avg_slope + s_w * slope;
 			prev_deque_time = now;
@@ -542,12 +539,16 @@ Packet* REDQueue::deque()
 						(q_->byteLength() >= edp_.th_min_pkts * edp_.mean_pktsize)) {
 					hf->ect() = 1;
 					hf->ce() = 1;
+					//printf("now: %lf, qlen: %d, avg_slope: %lf\n", Scheduler::instance().clock(), q_->byteLength(), avg_slope);
 				} else {
 					hf->ect() = 1;
 					hf->ce() = 0;
 				}
 			}
 		}
+		// std::ofstream outfile("qlen_dequeue.txt", std::ios::app);
+		// outfile << Scheduler::instance().clock() << " " << q_->byteLength() << " "<<avg_qlen <<" "<<avg_slope<< " "<<(hf->ect()<<1)+hf->ce()<< "\n";
+		// outfile.close();
 		/* end */
 	} else {
 		prev_deque_time = Scheduler::instance().clock();
